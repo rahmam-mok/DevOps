@@ -1,0 +1,224 @@
+#########Install bind-utills for nslookup############################
+yum install bind-utils -y
+yum i
+#################
+yum search squid
+yum info squid
+################################
+yum install squid34 -y
+#####################################
+vi /etc/squid/squid.conf
+then type the following on the top of the file and save and exit:
+visible_hostname squid
+#########################
+service squid start 
+service squid status 
+service squid stop
+service squid restart
+service squid reload
+
+############################# 
+netstat -apn | grep LIST
+
+Squid run on port 3128 
+##################################
+chkconfig --list
+To start the service automatically use following command
+chkconfig squid on
+
+##########################################################################################
+rpm -ql squid34 
+rpm -ql squid34 | grep -v share
+
+###################################################################
+vi /etc/squid/squid.conf
+then type the following on the top of the file and save and exit:
+visible_hostname squid.squid.test.com
+
+#########Firewall Setup############################
+service iptables status
+yum install telnet -y
+telnet IP_ADDRESS PORT
+
+vi /etc/sysconfig/iptables
+add a new line to allow port 3128 and save the file
+service iptables restart
+
+#########Browser Setup############################
+set up your browser proxy with squid cache IP and port 
+
+tail -f /var/log/squid/access.log
+
+#############Squid ACLS#######################################################
+
+acl acl_name definition1 definition2 ...definition_n
+http_access allow | deny acl1 acl2 ....acln
+Example 
+acl lan_computers src 192.168.1.12 192.168.1.11
+acl search dstdomain www.google.com
+http_access allow lan_computer search
+
+############ACL Types #####################
+Source IP, Destination IP, Source Domain, Destination Domain, Own IP, Destinition domain regular expression, Source domain regular expression, time, Destination URL regular expression, Destination URL's Path regular expression
+Destinition Port, Source Port, protocol, method, browser, proxy authentication, Proxy aunthentication regular expression, mac address.
+
+######################################################################################################################################################
+
+vi /etc/squid/squid.conf
+comment the following  line to test the ACL:
+#http_access allow localnet
+http_access allow localhost
+#############Add A new ACL#####################
+#acl testComputer src testComputer1_IP_Address testComputer1_IP_Address subnet_IP/24 
+#http_access allow testComputer
+#####################################################
+vi /etc/squid/hosts
+squid_server_IP squid_server_hostname
+
+vi /etc/squid/squid.conf
+host_file /etc/squid/hosts
+visible_hostname squid.squidtest.com
+###########################################################
+
+acl client srcdomain squid.squidtest.com
+http_access allow client
+
+acl wiki dstdomain www.wikipedia.com
+http_access allow client wiki 
+
+###########################################################
+
+acl wiki dstdomain .wikipedia.com
+http_access allow client wiki 
+
+###########################################################
+
+acl wiki dst destinition_IP
+http_access allow client wiki 
+
+
+###################Regular Expression########################################
+
+acl wiki dstdom_regex wikipidia
+http_access allow client wiki 
+############
+acl wiki dstdom_regex -i w[uio]kipedia  #Case Insensitivity   
+
+acl wiki dstdom_regex ^wiki  #anything that starts with wiki
+
+acl wiki dstdom_regex org$  #anything that end with org
+acl wiki dstdom_regex w.*org
+
+
+###################Time Bases ACL########################################
+
+M T W H F A S D (Weekday)
+
+acl hours time DS 16:00-23:00  #Allow access weekdays and Sunday from 4-11pm
+http_access allow hours
+
+###################MAC Address Bases ACL########################################
+
+acl mac_client arp mac_address_of_device
+http_access allow mac_client 
+
+###################File Bases ACL########################################
+mkdir /etc/squid/acl
+vi /etc/squid/acl/forbidden 
+then past the following: 
+wikipidia
+then edit the squid.conf and add the following: 
+vi /etc/squid/squid.conf
+acl forbidden dstmon_regex "/etc/squid/acl/forbidden"
+http_access deny forbidden
+http_access allow all
+
+#############################################
+vi /etc/squid/extra.conf 
+then past the following: 
+acl forbidden dstmon_regex "/etc/squid/acl/forbidden"
+http_access deny forbidden
+http_access allow all
+
+then edit the squid.conf and add the following: 
+vi /etc/squid/squid.conf
+
+include "/etc/squid/extra.conf"
+
+##################Basic Authentication ###########################
+yum install httpd-tools -y
+htpasswd -c /etc/squid/users squiduser   #User this cmd to for the first time 
+htpasswd /etc/squid/users squiduser2
+
+
+vi /etc/squid/squid.conf
+auth_param bascic program /usr/lib64/squid/ncsa_auth /etc/squid/users
+auth_param basic children 3
+auth_param basic MySquidProxy
+auth_param basic credentialsttl 1 hours
+
+acl authenticated proxy_auth REQUIRED
+http_access allow authenticated
+
+##################################
+acl authenticated proxy_auth squiduser2     # To allow specific users
+http_access allow authenticated
+
+##################Squid Log###################################################################
+
+ls /var/log/squid
+vi /etc/squid/squid.conf
+cache_log /var/log/squid/cache2.log
+
+##################Bandwidth Control ###################################################################
+
+acl client src ip_address_of_client
+http_access allow client
+
+delay_pools 1
+delay_calss 1 1
+delay_parameters 20000/10000    #20000 restore rate and 10000 bucket size
+delay_access 1 allow client 
+
+
+##################Anonymizing Proxy ###################################################################
+#go to browser and search whatismyip and whatismyproxy.com
+
+vi /etc/squid/squid.conf
+forwareded_for off
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
