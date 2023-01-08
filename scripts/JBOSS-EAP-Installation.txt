@@ -1,0 +1,91 @@
+sudo yum install java-11-openjdk-evel
+yum install java-1.8.0-openjdk
+readlink -f $(which java) 
+/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.352.b08-2.el7_9.x86_64/
+find /usr/lib/jvm/java-1.x.x-openjdk
+vim /etc/profile
+export JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.352.b08-2.el7_9.x86_64"
+export PATH=$JAVA_HOME/bin:$PATH
+
+
+useradd jboss-eap
+usermod -aG jboss-eap jboss-eap
+chown jboss-eap:jboss-eap /opt/jboss-eap 
+chown jboss-eap:jboss-eap /var/run/jboss-eap/
+
+#####################################################################
+
+https://developers.redhat.com
+
+
+wget https://developers.redhat.com/download-manager/file/jboss-eap-7.2.0-installer.jar
+java -jar jboss-eap-7.2.0-installer.jar -console
+Interactive mode walks through the installation. Following are the installation steps:
+	1. Language Selection: 0
+	2. Licence Agreement: 1
+	3. Installation Path: /opt/jboss-eap
+	4. Component Selection: 1
+	5. Create Admin User
+	6. Create Admin pass
+	7. Runtime Environment Configuration: 1
+	8. Generate Installation Scripts an Properties File: y
+
+
+#####################Creating the Service#####################
+	1. Create A service user:
+	Sudo useradd --no-create-home --shell /bin/faslse/ jboss-eap
+	
+	2. Set the JBOSS_HOME and JBOSS_USER:
+	Vi /opt/jboss-eap/bin/init.d/jboss-eap.conf
+	
+	3. Copy the service files: 
+	Cp /opt/jboss-eap/bin/init.d/jboss-eap.conf /etc/default/
+	Cp /opt/jboss-eap/bin/init.d/jboss-eap-rhel.sh /etc/init.d/
+	
+	4. Make the scripts executeable:
+	Chmod +x /etc/init.d/jboss-eap-rhel.sh
+	
+	5. Set the service to start automatically:
+	Chkconfig --add jboss-eap-rhel.sh
+	Chkconfig  jboss-eap-rhel.sh on
+	
+	6. Create the Jboss EAP's run directory and set the ownership:
+           mkdir  /var/run/jboss-eap
+          chown -R jboss-eap:jboss-eap /var/run/jboss-eap
+
+	7. Change the ownership of JBOSS_HOME directory:
+         chown -R jboss-eap:jboss-eap /opt/jboss-eap/
+
+##############SET SELinux Policy################################
+
+	1. Set up the enforcement file:
+	
+	vi /selinux/jboss-eap-rhel.te 
+	Then enter the following: 
+	
+	module jboss-eap-rhel 1.0;
+	
+	require{
+	type init_t;
+		type var_log_t;
+	  class file creates;
+	
+	
+	} 
+	
+	allow init_t var_log_t:file create;
+	
+	2. Create the policy file from the enforcement file:
+	Cd ~/selinus/
+	make -f /usr/share/selinux/devel/Makefile jboss-eap-rhel.pp
+	
+	3. Add the policy module:
+	semodule -I jboss-eap-rhel.pp
+	
+	4. Start Jboss EAP
+          systemctl start jboss-eap-rhel
+	
+	
+	
+	
+	

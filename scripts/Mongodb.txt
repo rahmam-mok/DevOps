@@ -1,0 +1,295 @@
+groupadd mongod
+useradd mongod
+usermod -aG mongod mongod
+
+https://www.mongodb.com/docs/v4.2/tutorial/install-mongodb-enterprise-on-amazon/ 
+####################RedHat##################################################################
+baseurl=https://repo.mongodb.com/yum/redhat/8Server/mongodb-enterprise/4.4/x86_64/
+
+###########Install mongodb-4.4###########################################################
+
+vi /etc/yum.repos.d/mongodb-enterprise-4.4.repo
+
+[mongodb-org-4.4]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/redhat/7Server/mongodb-org/4.4/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-4.4.asc
+
+###################################################################################
+
+
+vi /etc/yum.repos.d/mongodb-org-4.2.repo
+
+[mongodb-org-4.2]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/4.2/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-4.2.asc
+
+
+[mongodb-org-4.0]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/4.0/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-4.0.asc
+
+
+
+yum update -y
+
+yum search mongodb-org
+yum install mongodb-org -y
+
+#mongodb default installation directory is /bin/mongo.  
+
+yum --prefix=/opt/mongo install mongodb-org -y
+yum --prefix=/opt/mongo install mongodb-enterprise -y
+
+systemctl start mongod
+mongod --version
+which mongo
+systemctl enable mongod
+
+mongo
+show dbs;
+use admin
+show collections
+exit
+
+###########Install mongodb-4.4###########################################################
+
+vi /etc/yum.repos.d/mongodb-enterprise-4.4.repo
+
+[mongodb-enterprise-4.4]
+name=MongoDB Enterprise Repository
+baseurl=https://repo.mongodb.com/yum/redhat/$releasever/mongodb-org/4.4/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-4.4.asc
+
+###########Install mongodb-5.0###########################################################
+vi /etc/yum.repos.d/mongodb-enterprise-5.0.repo
+
+[mongodb-enterprise-5.0]
+name=MongoDB Enterprise Repository
+baseurl=https://repo.mongodb.com/yum/redhat/$releasever/mongodb-enterprise/5.0/$basearch/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-5.0.asc
+
+
+###########Install mongodb-6.0###########################################################
+vi /etc/yum.repos.d/mongodb-enterprise-6.0.repo
+
+[mongodb-enterprise-6.0]
+name=MongoDB Enterprise Repository
+baseurl=https://repo.mongodb.com/yum/redhat/$releasever/mongodb-enterprise/6.0/$basearch/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-6.0.asc
+
+####################Amazon Linux##################################################################
+
+vi /etc/yum.repos.d/mongodb-enterprise-4.2.repo
+[mongodb-enterprise-4.2]
+name=MongoDB Enterprise Repository
+baseurl=https://repo.mongodb.com/yum/amazon/2/mongodb-enterprise/4.2/$basearch/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-4.2.asc
+
+
+##################SYSTEMCTL#############################################################
+https://www.mongodb.com/docs/v4.2/tutorial/install-mongodb-enterprise-on-amazon/
+
+To run and manage your mongod process, you will be using your operating system’s built-in init system. Recent versions of Linux tend to use systemd (which uses the systemctl command), while older versions of Linux tend to use System V init (which uses the service command).
+
+If you are unsure which init system your platform uses, run the following command:
+
+ps --no-headers -o comm 1
+
+
+Start MongoDB.
+You can start the mongod process by issuing the following command:
+sudo systemctl start mongod
+
+If you receive an error similar to the following when starting mongod:
+
+Failed to start mongod.service: Unit mongod.service not found.
+Run the following command first.Then run the start command above again.
+
+
+sudo systemctl daemon-reload
+sudo systemctl status mongod
+
+You can optionally ensure that MongoDB will start following a system reboot by issuing the following command:
+
+sudo systemctl enable mongod
+sudo systemctl stop mongod
+sudo systemctl restart mongod
+
+#####################severice################
+
+sudo service mongod start
+Verify that MongoDB has started successfully
+
+var/log/mongodb/mongod.log
+the port configured in /etc/mongod.conf, 27017 by default.
+You can optionally ensure that MongoDB will start following a system reboot by issuing the following command:
+sudo chkconfig mongod on
+sudo service mongod stop
+sudo service mongod restart
+
+#############################################################################
+
+Secure MongoDB instance:After installation, the MongoDB database has no password and one can easily access it.
+
+sudo vi /etc/mongod.conf
+
+In the conf file, find and uncomment #Security line and add the below content appropriately.
+
+security:
+  authorization: enabled
+
+Restart the service for changes to apply.
+
+sudo systemctl restart mongod
+
+
+
+Create a User and Add Role in MongoDB
+$ mongo
+Here we will create a user and give them admin roles. We will create and use the db “admin“:
+
+use admin
+db.createUser(
+{
+user: "mongouser",
+pwd: passwordPrompt(), // or cleartext password
+roles: [ { role: "userAdminAnyDatabase", db: "admin" }, "readWriteAnyDatabase" ]
+}
+)
+
+
+Then login to the created user now.
+mongo -u mongouser -p --authenticationDatabase admin
+
+Create a collection in MongoDB
+
+db.userdetails.insertOne(
+   {F_Name: "fist name",
+    L_NAME: "last name",
+    ID_NO: "12345",
+     AGE: "49",
+     TEL: "+254654671"
+   }
+)
+
+
+$ show collections
+
+
+Create a User with read and write privileges.
+
+use testdatabase
+db.createUser(
+   {
+     user: 'username',
+     pwd: 'passwordgoeshere',
+     roles: [ { role: 'readWrite', db: 'testdatabase' } ]
+   }
+ );
+
+
+Change MongoDB default Path on CentOS 8/7 & RHEL 8/7:
+
+MongoDB stores its data in the default path in /var/lib/mongo. You can set MongoDB to store data in a custom path as shown below.
+
+sudo systemctl stop mongod.service
+sudo mkdir -p /data/mongo
+sudo chown -R mongod:mongod /data/mongo
+sudo vi /etc/mongod.conf
+
+path: /data/log/mongodb/mongod.log   #where to write logging data.
+dbPath: /data/mongo    #Where and how to store data.
+pidFilePath: /data/mongodb/mongod.pid  # location of pidfile
+
+
+Configure SELinux and its enforcing mode since the path has been changed. Without configuring SELinux, it will not allow MongoDB to access /sys/fs/cgroup.
+
+First, install checkpolicy.
+
+sudo yum install checkpolicy
+####OR###
+sudo yum install policycoreutils-python
+
+Create a new check policy with the information as below.
+
+cat > mongodb_cgroup_memory.te <<EOF
+module mongodb_cgroup_memory 1.0;
+
+require {
+    type cgroup_t;
+    type mongod_t;
+    class dir search;
+    class file { getattr open read };
+}
+
+#============= mongod_t ==============
+allow mongod_t cgroup_t:dir search;
+allow mongod_t cgroup_t:file { getattr open read };
+EOF
+
+Then compile and load the policy created above.
+
+checkmodule -M -m -o mongodb_cgroup_memory.mod mongodb_cgroup_memory.te
+semodule_package -o mongodb_cgroup_memory.pp -m mongodb_cgroup_memory.mod
+sudo semodule -i mongodb_cgroup_memory.pp
+
+Now a new check policy has been compiled, load the 3 directories as below:
+
+1. Log File Directory
+Run the commands below to update files and directory contexts:
+
+sudo semanage fcontext -a -t mongod_log_t '/data/log/mongodb/mongod.*'
+sudo chcon -Rv -u system_u -t mongod_log_t '/data/log/mongodb/mongod.log'
+sudo restorecon -R -v '/data/log/mongodb/mongod.log'
+2. Data Directory
+For data directory apply as below:
+
+sudo semanage fcontext -a -t mongod_var_lib_t '/data/mongo.*'
+sudo chcon -Rv -u system_u -t mongod_var_lib_t '/data/mongo'
+sudo restorecon -R -v '/data/mongo'
+
+PID Directory
+Same applies to updating pod directories.
+semanage fcontext -a -t mongod_var_run_t '/data/mongodb/mongod.*'
+chcon -Rv -u system_u -t mongod_var_run_t '/data/mongodb/mongod.pid'
+restorecon -R -v '/data/mongodb/mongod.pid'
+Update the firewall and Iptables
+For Firewalld use:
+
+sudo firewall-cmd --zone=public --add-port=27017/tcp --permanent
+sudo firewall-cmd --reload
+For those using Iptables:
+
+sudo iptables -A INPUT -p tcp --dport 27017 -j ACCEPT
+sudo iptables-save | grep 27017
+Reload and start Mongod daemon as below.
+
+sudo systemctl daemon-reload
+sudo systemctl start mongod.service
+In case MongoDB fails to reload and start it using:
+
+sudo systemctl daemon-reload
+sudo systemctl start mongod
+
+sudo yum erase $(rpm -qa | grep mongodb-org)
+sudo rm -r /var/log/mongodb
+sudo rm -r /var/lib/mongo
+
+

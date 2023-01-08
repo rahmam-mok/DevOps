@@ -1,0 +1,124 @@
+################User Administration ############################################
+#useradd creates a new user account using the default settings specified in the /etc/default/useradd file.
+#The command adds an entry to the /etc/passwd, /etc/shadow, /etc/group and /etc/gshadow files.
+sudo useradd haque
+sudo passwd joeB
+sudo useradd -m haque -p PASSWORD
+sudo groupadd kachalGroup
+sudo usermod -a -G kachalGroup haque
+members kachalGroup
+#Use the -m (--create-home) option to create the user home directory as /home/username:
+sudo useradd -m testuser2
+ls -la /home/username/
+
+sudo useradd -g users -G wheel,developers username
+#Check the user entry in the /etc/passwd file to verify the user’s login shell:
+grep username /etc/passwd
+id username
+
+sudo su -
+################Find Command##############################################
+#Find all the files whose name is tecmint.txt in a current working directory.
+ find . -name test.txt
+#Find all the files under /home directory with the name test.txt.
+find /home -name test.txt
+#Find all the files whose name is test.txt and contains both capital and small letters (Case Insensetive) in /home directory
+find /home -iname test.txt
+#Find all directories whose name is Ansible in / directory.
+find / -type d -iname Ansible
+#Find all php files whose name is test.txt in a current working directory.
+find . -type f -name test.txt
+# find / -user root -name test.txt
+find /home -user haue
+find /home -group kachalgroup
+#################Chmod##########################################################
+chmod u=rwx,g=rx,o=r myfile    (read=4, write=2 and execute=1 no permission=0. If u=rwx then the fist digit will be 4+2+1=7)   
+chmod 754 myfile
+chmod 400 myfile
+####################################################################################
+chown root file1.txt
+ls -lart tmpfile
+chown haque:kachalgroup tmpfile
+##########OS Version#############################################################
+cat /etc/os-release
+lsb_release -a
+hostnamectl
+uname -r
+
+##########Disk Space#############################################################
+df -H /dev/sda1
+#The du command is quite different to the df command, in that it reports on directories and not drives.
+du -h /opt
+#if we want to know the total usage of a particular directory
+du -sh /opt
+#The du command is also a great tool to use in order to see a list of directories that are using the most disk space on your system. The way to do this is by piping the output of du to two other commands: sort and head. 
+The command to find out the top 10 directories eating space on a drive would look something like this:
+du -a /opt | sort -n -r | head -n 10    
+###################update yum packages###########################################
+
+yum update -y
+#################Install OpenJDK############################################
+yum install java-1.8.0-openjdk
+java -version
+update-alternatives --config 'java'
+##################Install httpd########################################################
+To install the JBoss EAP specific version of httpd package run the following command:
+yum install httpd
+ chkconfig httpd on
+service httpd start
+service httpd stop
+service httpd restart
+######################
+#Install httpd using dnf package manager
+dnf install httpd
+#Run and enable the Apache webserver to start after reboot:
+# systemctl enable httpd
+# systemctl start httpd
+
+By default the Apache web server will greet you with a default welcome page.To disable the default Apache welcome page insert your index.html into /var/www/html/ directory. For example:
+echo Apache on RHEL 8 / CentOS 8 > /var/www/html/index.html
+
+###########Install Ansible############################
+
+#####################
+#REHL7
+yum -y install ansible
+
+ansible --version
+##########REHL8#########
+subscription-manager register --auto-attach
+
+subscription-manager repos --enable ansible-2.8-for-rhel-8-x86_64-rpms
+
+yum -y install ansible
+
+ansible --version
+
+#########REHL8 & 9##########
+yum install python3-pip
+pip3 install ansible
+##############
+yum list | grep  ansible
+yum install ansible-core.x86_64
+###################
+
+/etc/ansible — The main configuration folder which encompasses all Ansible config
+/etc/ansible/hosts — This file holds information for the hosts/and host groups you will configure
+/etc/ansible/ansible.cfg — The main configuration file for Ansible
+/etc/ansible/roles — This folder allows you to create folders for each server role, web/app/db, etc.
+
+it’s recommended that you configure a keypair on your Ansible server by running ssh-keygen -t rsa and then exporting the public key (id_rsa.pub) to the authorized_keys file for the user (usually root) on the server you’re wanting to run commands against. This will allow you to seamlessly execute playbooks against your environment without requiring a password to be entered each time.
+
+
+#create Ansible Playbook to install httpd
+
+- hosts: httpd
+  tasks:
+    - name: install httpd
+      yum: name=httpd update_cache=yes state=latest
+
+
+
+
+##########Install Python############################################
+yum install python

@@ -1,0 +1,24 @@
+When executed without any option, useradd creates a new user account using the default settings specified in the /etc/default/useradd file.
+The command adds an entry to the /etc/passwd, /etc/shadow, /etc/group and /etc/gshadow files
+sudo groupadd mongod
+sudo useradd mongod
+sudo passwd mongod
+
+Use the -m (--create-home) option to create the user home directory as /home/username
+
+sudo useradd -m mongod
+
+Adding User to the sudo Group
+usermod -aG sudo mongod
+sudo whoami
+Adding User to the sudoers File 
+Let’s say you want to allow the user to run sudo commands without being asked for a password. To do that, open the /etc/sudoers file:
+
+Visudo
+mongod ALL=(ALL) NOPASSWD:ALL
+
+Another typical example is to allow the user to run only specific commands via sudo . For example, to allow only the mkdir and rmdir commands, you would use:
+
+username ALL=(ALL) NOPASSWD:/bin/mkdir,/bin/rmdir
+Instead of editing the sudoers file, you can accomplish the same by creating a new file with the authorization rules in the /etc/sudoers.d directory. Add the same rule as you would add to the sudoers file:
+echo "mongod  ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/mongod
