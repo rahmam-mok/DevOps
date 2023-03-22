@@ -1,0 +1,50 @@
+    yum update -y
+    yum install wget unzip -y
+    yum install java-1.8.0-openjdk -y
+    cp /home/ec2-user/jboss-eap-7.4.0.zip /opt
+   
+
+   unzip jboss-eap-7.4.0.zip
+   mv jboss-eap-7.4/ jboss-eap
+
+   vi jboss-eap/bin/init.d/jboss-eap.conf
+   cp /opt/jboss-eap/bin/init.d/jboss-eap.conf /etc/default/
+   cp /opt/jboss-eap/bin/init.d/jboss-eap-rhel.sh /etc/init.d/
+   chmod +x /etc/init.d/jboss-eap-rhel.sh
+   useradd --no-create-home --shell /bin/false jboss-eap
+   mkdir /var/run/jboss-eap
+   chown -R jboss-eap:jboss-eap /var/run/jboss-eap/
+   chown -R jboss-eap:jboss-eap /opt/jboss-eap/
+   chkconfig –add jboss-eap-rhel.sh
+   chkconfig --add jboss-eap-rhel.sh
+   chkconfig jboss-eap-rhel.sh on
+   service start jboss-eap-rhel
+   systemctl start jboss-eap-rhel
+
+  
+
+    cd /opt/
+    mkdir selinux
+    cd selinux/
+    vi jboss-eap-rhel.te
+ 
+##################################################################
+ cat jboss-eap-rhel.te
+module jboss-eap-rhel 1.0;
+require {
+             type init_t;
+              type var_log_t;
+              class file create;
+}
+allow init_t var_log_t:file create;
+
+######################################################################
+   yum install selinux-policy-devel
+   sudo make -f /usr/share/selinux/devel/Makefile jboss-eap-rhel.pp
+   sudo make -f /usr/share/selinux/devel/Makefile jboss-eap-rhel.pp
+   sudo semodule -i jboss-eap-rhel.pp
+   systemctl start jboss-eap-rhel.service
+   systemctl status jboss-eap-rhel.service
+  
+
+
