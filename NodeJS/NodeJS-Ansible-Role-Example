@@ -1,0 +1,53 @@
+#ansible-role to parameterize Node.js version and Install Node.js 8.14.0 on RedHat
+
+
+Create a directory structure for the role:
+
+$ mkdir -p roles/nodejs/tasks
+
+
+Create a file named main.yml in the roles/nodejs/tasks directory:
+
+---
+- name: Add Node.js repository
+  yum_repository:
+    name: nodesource
+    description: Node.js Repository
+    baseurl: "https://rpm.nodesource.com/pub_{{ nodejs_version }}/el/{{ ansible_distribution_major_version }}/$basearch"
+    gpgcheck: yes
+    gpgkey: "https://rpm.nodesource.com/pub_{{ nodejs_version }}/el/{{ ansible_distribution_major_version }}/RPMS/{{ ansible_architecture }}/nodesource-release-el{{ ansible_distribution_major_version }}-1.noarch.rpm"
+    enabled: yes
+
+- name: Install Node.js
+  yum:
+    name: nodejs
+    state: present
+
+- name: Install npm
+  yum:
+    name: npm
+    state: present
+
+
+Create a playbook (e.g., install_nodejs.yml) to use the nodejs role:
+
+---
+- name: Install Node.js
+  hosts: your_host_name
+  become: yes
+
+  vars:
+    nodejs_version: "8.x"  # Set the desired Node.js version
+
+  roles:
+    - nodejs
+
+
+Replace your_host_name with the target host or group of hosts where you want to install Node.js.
+Run the playbook using the ansible-playbook command:
+
+ansible-playbook install_nodejs.yml
+
+
+This role adds the Node.js repository, installs Node.js using the specified version, and installs npm. 
+The nodejs_version variable in the playbook allows you to easily set the desired Node.js version.
