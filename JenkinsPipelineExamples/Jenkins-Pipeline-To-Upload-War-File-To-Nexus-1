@@ -1,0 +1,51 @@
+Jenkins multi branch pipeline to read credentials from vault and clone github repository and build maven projects based on branch and run unit tests and run selenium tests and upload artefacts or war files to nexus repository and perform rolling deployment to AWS ec2 instances where ec2 instances are behind AWS load balancer based on environment 
+
+
+
+
+pipeline {
+   agent any
+
+   environment {
+       NEXUS_CREDENTIALS = credentials('nexus-credentials')
+       VAULT_CREDENTIALS = credentials('vault-credentials')
+   }
+
+   stages {
+       stage('Clone Repository') {
+           steps {
+               git 'https://github.com/your/repo.git'
+           }
+       }
+
+       stage('Build and Test') {
+           steps {
+               withCredentials([vaultSecret(credentialsId: 'vault-credentials', path: 'path/to/vault/secret', secretValues: [
+                   [$class: 'VaultSecret', path: 'username', secretValue: 'username'],
+                   [$class: 'VaultSecret', path: 'password', secretValue: 'password']
+               ])]) {
+                   sh 'mvn clean package'
+                   // Run unit tests
+                   // Run Selenium tests
+               }
+           }
+       }
+
+       stage('Upload to Nexus') {
+           steps {
+               nexusUpload nexusInstanceId: 'nexus-instance-id', credentialsId: 'nexus-credentials', groupId: 'your.groupId', repository: 'your-repo', version: '1.0.0', artifacts: [
+                   // Specify artifacts or WAR files to upload
+               ]
+           }
+       }
+
+       stage('Rolling Deployment') {
+           when {
+               branch 'production'
+           }
+           steps {
+               // Use Ansible or AWS CLI to perform rolling deployment to EC2 instances behind AWS Load Balancer
+           }
+       }
+   }
+}

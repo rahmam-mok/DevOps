@@ -1,0 +1,77 @@
+
+
+---
+- name: Install Learning Locker on RHEL
+  hosts: your_host_name
+  become: yes
+
+  vars:
+    learning_locker_version: "5.3.2"  # Set the desired Learning Locker version
+    nodejs_version: "14.x"  # Set the desired Node.js version
+
+  tasks:
+    - name: Install Node.js and npm
+      yum:
+        name: "https://rpm.nodesource.com/pub_{{ nodejs_version }}/el/8/x86_64/nodesource-release-el8-1.noarch.rpm"
+        state: present
+
+    - name: Install required dependencies
+      yum:
+        name:
+          - git
+          - gcc
+          - make
+          - glibc-headers
+          - glibc-devel
+          - pcre-devel
+          - zlib-devel
+        state: present
+
+    - name: Clone Learning Locker repository
+      git:
+        repo: "https://github.com/LearningLocker/learninglocker.git"
+        dest: "/opt/learninglocker"
+        version: "{{ learning_locker_version }}"
+        depth: 1
+
+    - name: Install Learning Locker dependencies
+      shell: npm ci --production
+      args:
+        chdir: "/opt/learninglocker"
+
+    - name: Configure Learning Locker environment
+      copy:
+        src: "config.js"
+        dest: "/opt/learninglocker/config.js"
+
+    - name: Build Learning Locker assets
+      shell: npm run build
+      args:
+        chdir: "/opt/learninglocker"
+
+    - name: Start Learning Locker
+      shell: npm start
+      args:
+        chdir: "/opt/learninglocker"
+
+
+
+Create a playbook file (e.g., install_learning_locker.yml) with the following content:
+Create a config.js file with the desired configuration for Learning Locker. You can use the default configuration as a starting point and modify it as needed. Place this file in the same directory as your playbook.
+Replace your_host_name with the target host or group of hosts where you want to install Learning Locker.
+Set the desired version for Learning Locker by updating the learning_locker_version variable.
+Set the desired version of Node.js by updating the nodejs_version variable.
+Run the playbook using the ansible-playbook command:
+
+ansible-playbook install_learning_locker.yml
+
+
+This playbook installs Node.js and npm using the NodeSource repository, installs the required dependencies for Learning Locker, 
+clones the Learning Locker repository, installs its dependencies using npm, copies the config.js file, builds the assets, and starts Learning Locker.
+
+
+
+
+
+
+

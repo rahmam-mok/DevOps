@@ -1,0 +1,96 @@
+#To create an Ansible role that parameterizes the PHP version and installs PHP 7.4 on Red Hat Enterprise Linux 8 (RHEL 8), you can follow these steps:
+
+1. Create the role directory structure:
+ansible-galaxy init install_php
+
+2. Update the install_php/defaults/main.yml file with the default values and variables:
+
+---
+php_version: "7.4"
+
+3. Modify the install_php/tasks/main.yml file with the installation tasks:
+
+---
+- name: Enable EPEL repository
+  yum:
+    name: epel-release
+    state: present
+
+- name: Install PHP packages
+  yum:
+    name: "php{{ php_version }}-{{ item }}"
+    state: present
+  loop:
+    - php
+    - php-cli
+    - php-common
+    - php-devel
+    - php-json
+    - php-opcache
+    - php-readline
+    - php-xml
+
+- name: Install required dependencies
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - gcc
+    - pcre-devel
+    - zlib-devel
+
+
+4. Update the install_php/meta/main.yml file with the role metadata:
+---
+galaxy_info:
+  role_name: install_php
+  author: Your Name
+  description: Role to install PHP on RHEL 8
+  min_ansible_version: 2.10
+
+
+5. Now, you can use this role in your playbook. Create a playbook file (e.g., install_php.yml) with the following content:
+
+
+---
+- name: Install PHP on RHEL 8
+  hosts: your_host_name
+  become: yes
+
+  roles:
+    - install_php
+
+
+Replace your_host_name with the target host or group of hosts where you want to install PHP 7.4.
+6. Run the playbook using the ansible-playbook command:
+
+
+ansible-playbook install_php.yml --extra-vars "php_version=7.4"
+
+
+ou can specify the desired PHP version using the --extra-vars flag when running the playbook. For example, to install PHP version 7.4, use --extra-vars "php_version=7.4". If you want to install a different PHP version, simply update the php_version value accordingly.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

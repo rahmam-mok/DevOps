@@ -1,0 +1,163 @@
+#Ansible playbook scripts to custom install production ready learning locker on RedHat 
+
+#Create a playbook file (e.g., install_learning_locker.yml) with the following content:
+
+
+
+---
+- name: Install Learning Locker on RHEL
+  hosts: your_host_name
+  become: yes
+
+  vars:
+    learning_locker_version: "5.3.2"  # Set the desired Learning Locker version
+    nodejs_version: "14.x"  # Set the desired Node.js version
+    mongodb_version: "4.4"  # Set the desired MongoDB version
+
+  tasks:
+    - name: Install Node.js and npm
+      yum:
+        name: "https://rpm.nodesource.com/pub_{{ nodejs_version }}/el/8/x86_64/nodesource-release-el8-1.noarch.rpm"
+        state: present
+
+    - name: Install MongoDB repository
+      yum:
+        name: "https://repo.mongodb.org/yum/redhat/8/mongodb-org-{{ mongodb_version }}/redhat/rhel-8-x86_64/mongodb-org-{{ mongodb_version }}-repo-1.x86_64.rpm"
+        state: present
+
+    - name: Install required dependencies
+      yum:
+        name:
+          - git
+          - gcc
+          - make
+          - glibc-headers
+          - glibc-devel
+          - pcre-devel
+          - zlib-devel
+          - mongodb-org
+        state: present
+
+    - name: Clone Learning Locker repository
+      git:
+        repo: "https://github.com/LearningLocker/learninglocker.git"
+        dest: "/opt/learninglocker"
+        version: "{{ learning_locker_version }}"
+        depth: 1
+
+    - name: Install Learning Locker dependencies
+      shell: npm ci --production
+      args:
+        chdir: "/opt/learninglocker"
+
+    - name: Copy Learning Locker environment configuration
+      template:
+        src: "config/.env.example"
+        dest: "/opt/learninglocker/.env"
+
+    - name: Set up MongoDB database
+      shell: |
+        mongo learninglocker --eval 'db.createUser({user: "learninglocker", pwd: "learninglocker", roles: [{role: "readWrite", db: "learninglocker"}]})'
+      args:
+        executable: /usr/bin/mongo
+
+    - name: Start Learning Locker
+      shell: npm start
+      args:
+        chdir: "/opt/learninglocker"
+
+
+
+Create a .env file with the desired configuration for Learning Locker. You can use the .env.example file provided in the Learning Locker repository as a starting point and modify it as needed. Place this file in the same directory as your playbook.
+Replace your_host_name with the target host or group of hosts where you want to install Learning Locker.
+Set the desired version for Learning Locker by updating the learning_locker_version variable.
+Set the desired version for Node.js by updating the nodejs_version variable.
+Set the desired version for MongoDB by updating the mongodb_version variable.
+Run the playbook using the ansible-playbook command:
+
+ansible-playbook install_learning_locker.yml
+
+
+This playbook installs Node.js and npm using the NodeSource repository, adds the MongoDB repository, 
+installs the required dependencies for Learning Locker (including MongoDB), clones the Learning Locker repository, 
+installs its dependencies using npm, copies the .env configuration file, sets up the MongoDB database and user, and starts Learning Locker.
+
+
+##############################################
+
+---
+name: Install and deploy Learning Locker on Red Hat Enterprise Linux (without Docker)
+  hosts: your_target_hosts
+  become: true
+  vars:
+    learning_locker_version: "v5.1.0"  # Specify the version you want to install
+    learning_locker_port: 8080  # Customize the port if needed
+  tasks:
+name: Enable EPEL repository
+      yum:
+        name: epel-release
+        state: present
+name: Install required packages
+      yum:
+        name: ['curl', 'git', 'nodejs', 'npm', 'mongodb-server']
+        state: present
+name: Start and enable MongoDB service
+      service:
+        name: mongod
+        state: started
+        enabled: true
+name: Clone Learning Locker repository
+      git:
+        repo: https://github.com/LearningLocker/learninglocker.git
+dest: /opt/learninglocker
+        version: "{{ learning_locker_version }}"
+name: Install Learning Locker dependencies
+      shell: npm install
+      args:
+        chdir: /opt/learninglocker
+name: Configure Learning Locker environment variables
+      copy:
+        content: |
+          LL_APP_NAME=learning-locker
+          LL_APP_URL=http://your_learning_locker_url
+LL_API_USER=your_api_user
+          LL_API_PASSWORD=your_api_password
+          LL_APP_PORT={{ learning_locker_port }}
+          MONGODB_URI=mongodb://localhost/learninglocker
+dest: /opt/learninglocker/.env
+name: Build Learning Locker assets
+      shell: npm run build
+      args:
+        chdir: /opt/learninglocker
+name: Start Learning Locker server
+      shell: npm start
+      args:
+        chdir: /opt/learninglocker
+name: Ensure Learning Locker server is running
+      wait_for:
+        host: http://localhost:{{ learning_locker_port }}
+state: started
+        timeout: 300
+name: Display Learning Locker status
+      uri:
+        url: http://localhost:{{ learning_locker_port }}/api/status
+      return_content: yes
+      register: learning_locker_status
+name: Display Learning Locker status
+      debug:
+        var: learning_locker_status.content
+```
+Before running this playbook, make sure you replace `your_target_hosts` with the actual target hosts where you want to install and deploy Learning Locker. Additionally, you can customize the variables `learning_locker_version` to specify the version you want to install and `learning_locker_port` to set the desired port for Learning Locker.
+This playbook performs the following steps:
+Enables the EPEL repository for accessing additional packages.
+Installs required packages (`curl`, `git`, `nodejs`, `npm`, `mongodb-server`).
+Starts and enables the MongoDB service.
+Clones the Learning Locker repository to `/opt/learninglocker`.
+Installs Learning Locker dependencies using npm.
+Configures the Learning Locker environment variables in the `.env` file.
+Builds Learning Locker assets using npm.
+Starts the Learning Locker server.
+Waits for the server to start successfully.
+Checks the status of Learning Locker by making an API request.
+Displays the Learning Locker status.
+Please note that this playbook assumes you have a basic understanding of Ansible and have the necessary permissions to run it on the target hosts. Also,

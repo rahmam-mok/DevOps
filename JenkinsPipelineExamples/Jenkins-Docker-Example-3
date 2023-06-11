@@ -1,0 +1,45 @@
+#Docker file or scripts to pull moodle official Docker image through nexus proxy and rebuild the Docker image and push the Docker image back to nexus registry
+
+
+Dockerfile:
+```Dockerfile
+# Base image
+FROM nexus-proxy/moodle:latest
+
+# Copy any additional files or configurations, if needed
+
+# Build instructions
+RUN <build instructions>
+
+# Set any necessary environment variables, if needed
+
+# Specify the port(s) to expose, if needed
+
+# Set the entry point or command, if needed
+
+# Additional Dockerfile instructions, if required
+
+# Start the application, if necessary
+CMD ["<command>"]
+```
+
+Script:
+```bash
+#!/bin/bash
+
+# Pull the Moodle official Docker image through the Nexus proxy
+docker pull nexus-proxy/moodle:latest
+
+# Rebuild the Docker image with any necessary changes
+docker build -t your-custom-moodle-image .
+
+# Tag the rebuilt image for pushing to the Nexus registry
+docker tag your-custom-moodle-image nexus-registry/your-custom-moodle-image:latest
+
+# Push the Docker image back to the Nexus registry
+docker push nexus-registry/your-custom-moodle-image:latest
+```
+
+Make sure to replace `nexus-proxy` with the appropriate Nexus proxy URL, and `nexus-registry` with the correct Nexus registry URL. Also, modify the Dockerfile and script as needed to incorporate any additional files, configurations, or build instructions specific to your requirements.
+
+Please note that you may need to authenticate with the Nexus registry using appropriate credentials or API keys, depending on your Nexus setup.

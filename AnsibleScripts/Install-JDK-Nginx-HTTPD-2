@@ -1,0 +1,79 @@
+#Example of an Ansible playbook that installs OpenJDK 1.8, Nginx, Apache HTTP Server (httpd), and JBoss EAP (Enterprise Application Platform) on Red Hat Enterprise Linux 8:
+
+
+---
+- name: Install OpenJDK, Nginx, httpd, and JBoss EAP
+ hosts: your_target_host
+ become: true
+ vars:
+   jdk_version: 1.8.0
+   jdk_pkg: "java-{{ jdk_version }}-openjdk-devel"
+   jboss_eap_version: 7.3.0
+   jboss_eap_pkg: "jboss-eap-{{ jboss_eap_version }}"
+
+ tasks:
+   - name: Install OpenJDK
+     package:
+       name: "{{ jdk_pkg }}"
+       state: present
+
+   - name: Install Nginx
+     package:
+       name: nginx
+       state: present
+
+   - name: Install Apache HTTP Server (httpd)
+     package:
+       name: httpd
+       state: present
+
+   - name: Start and enable Nginx
+     service:
+       name: nginx
+       state: started
+       enabled: yes
+
+   - name: Start and enable Apache HTTP Server (httpd)
+     service:
+       name: httpd
+       state: started
+       enabled: yes
+
+   - name: Download JBoss EAP
+     get_url:
+       url: "https://example.com/path/to/{{ jboss_eap_pkg }}.zip"
+       dest: "/tmp/{{ jboss_eap_pkg }}.zip"
+
+   - name: Unzip JBoss EAP
+     unarchive:
+       src: "/tmp/{{ jboss_eap_pkg }}.zip"
+       dest: "/opt"
+       remote_src: true
+
+   - name: Set JBOSS_HOME environment variable
+     lineinfile:
+       dest: /etc/environment
+       line: 'JBOSS_HOME="/opt/{{ jboss_eap_pkg }}"'
+       state: present
+       create: yes
+
+   - name: Reload environment variables
+     command: "source /etc/environment"
+
+   - name: Start JBoss EAP
+     command: "{{ jboss_eap_pkg }}/bin/standalone.sh -b=0.0.0.0"
+     args:
+       chdir: "/opt"
+
+
+# Make sure to replace `your_target_host` with the actual hostname or IP address of your target Red Hat 8 server. Adjust the URLs and package names for JBoss EAP accordingly based on your environment.
+
+# Save this playbook in a file (e.g., `install_apps.yml`) and execute it using the `ansible-playbook` command:
+
+# ```bash
+# ansible-playbook -i inventory.ini install_apps.yml
+# ```
+
+# Remember to adjust the `inventory.ini` file to include the appropriate host or group of hosts you want to target.
+
+# This playbook will install OpenJDK 1.8, Nginx, Apache HTTP Server (httpd), and JBoss EAP on the specified host, and start the Nginx, httpd, and JBoss EAP services.

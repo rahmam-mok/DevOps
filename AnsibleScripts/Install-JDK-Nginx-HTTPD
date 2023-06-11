@@ -1,0 +1,57 @@
+#Ansible role scripts to install openjdk1.8 and nginx and httpd and jboss eap on Redhat 8
+
+
+---
+- name: Install OpenJDK
+ package:
+   name: "java-1.8.0-openjdk-devel"
+   state: present
+
+- name: Install Nginx
+ package:
+   name: nginx
+   state: present
+
+- name: Install Apache HTTP Server (httpd)
+ package:
+   name: httpd
+   state: present
+
+- name: Start and enable Nginx
+ service:
+   name: nginx
+   state: started
+   enabled: yes
+
+- name: Start and enable Apache HTTP Server (httpd)
+ service:
+   name: httpd
+   state: started
+   enabled: yes
+
+- name: Download JBoss EAP
+ get_url:
+   url: "https://example.com/path/to/jboss-eap-7.3.0.zip"
+   dest: "/tmp/jboss-eap-7.3.0.zip"
+
+- name: Unzip JBoss EAP
+ unarchive:
+   src: "/tmp/jboss-eap-7.3.0.zip"
+   dest: "/opt"
+   remote_src: true
+
+- name: Set JBOSS_HOME environment variable
+ lineinfile:
+   dest: /etc/environment
+   line: 'JBOSS_HOME="/opt/jboss-eap-7.3.0"'
+   state: present
+   create: yes
+
+- name: Reload environment variables
+ command: "source /etc/environment"
+
+- name: Start JBoss EAP
+ command: "jboss-eap-7.3.0/bin/standalone.sh -b=0.0.0.0"
+ args:
+   chdir: "/opt"
+   

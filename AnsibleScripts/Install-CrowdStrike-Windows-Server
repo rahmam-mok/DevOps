@@ -1,0 +1,27 @@
+#Ansible scripts to install and configure crowd strike agents on Windows Server 2012
+
+
+
+---
+- name: Install and configure CrowdStrike agent
+ hosts: your_target_host
+ become: true
+ vars:
+   crowdstrike_agent_installer: crowdstrike-agent-installer.exe
+   crowdstrike_client_id: YOUR_CLIENT_ID
+   crowdstrike_client_secret: YOUR_CLIENT_SECRET
+
+ tasks:
+   - name: Copy CrowdStrike agent installer to the remote host
+     win_copy:
+       src: "/path/to/{{ crowdstrike_agent_installer }}"
+       dest: "C:\\Temp\\{{ crowdstrike_agent_installer }}"
+
+   - name: Install CrowdStrike agent
+     win_shell: 'C:\\Temp\\{{ crowdstrike_agent_installer }} /install /quiet'
+
+   - name: Register CrowdStrike agent
+     win_shell: 'C:\\Program Files\\CrowdStrike\\FalconSensor.exe -s --cid="{{ crowdstrike_client_id }}" --csid="{{ crowdstrike_client_secret }}"'
+
+
+     

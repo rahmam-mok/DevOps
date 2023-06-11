@@ -1,0 +1,51 @@
+#Ansible scripts to install PHP 7.4 with pecl-redis on Redhat Enterprise 8
+
+
+---
+- name: Install PHP 7.4 with pecl-redis on RHEL 8
+  hosts: your_host_name
+  become: yes
+
+  tasks:
+    - name: Enable EPEL repository
+      yum:
+        name: epel-release
+        state: present
+
+    - name: Install PHP 7.4 packages
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - php
+        - php-cli
+        - php-common
+        - php-devel
+        - php-json
+        - php-opcache
+        - php-readline
+        - php-xml
+
+    - name: Install required dependencies
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - gcc
+        - pcre-devel
+        - zlib-devel
+
+    - name: Install pecl-redis
+      shell: pecl install redis
+      args:
+        executable: /usr/bin/env bash
+        creates: /etc/php.d/40-redis.ini
+
+    - name: Enable pecl-redis extension
+      lineinfile:
+        dest: /etc/php.d/40-redis.ini
+        line: 'extension=redis.so'
+        create: yes
+
+
+

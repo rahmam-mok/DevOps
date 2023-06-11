@@ -1,0 +1,61 @@
+To read Nexus login credentials from Vault, pull Docker images from Nexus, rebuild the Docker image, and then push the image to a Nexus Docker repository using Jenkins pipeline scripts, you can combine the Vault Plugin and the Docker Pipeline Plugin. Here's an example of a Jenkins pipeline script that performs these steps:
+
+```groovy
+pipeline {
+   agent any
+
+   environment {
+       VAULT_CREDENTIALS = credentials('vault-credentials')
+   }
+
+   stages {
+       stage('Pull Docker Image') {
+           steps {
+               // Read Nexus credentials from Vault
+               withCredentials([vaultSecret(credentialsId: 'vault-credentials', path: 'path/to/vault/secret', secretValues: [
+                   [$class: 'VaultSecret', path: 'username', secretValue: 'username'],
+                   [$class: 'VaultSecret', path: 'password', secretValue: 'password']
+               ])]) {
+                   // Pull the Docker image from Nexus
+                   docker.withRegistry('https://your.nexus/repository', 'nexus-credentials') {
+                       def image = docker.image('your-image:tag')
+                       image.pull()
+                   }
+               }
+           }
+       }
+
+       stage('Rebuild and Push Docker Image') {
+           steps {
+               // Build or modify your Docker image
+               // e.g., using Dockerfile or other means
+               // ...
+
+               // Push the Docker image to Nexus
+               docker.withRegistry('https://your.nexus/repository', 'nexus-credentials') {
+                   def image = docker.build('your-image:tag')
+                   image.push()
+               }
+           }
+       }
+   }
+}
+```
+
+Here's a breakdown of the script:
+
+- The `VAULT_CREDENTIALS` environment variable is defined to read the Vault credentials using the `vault-credentials` credentials ID.
+- The `withCredentials` block is added to wrap the steps that interact with Nexus, allowing the credentials to be securely accessed from Vault.
+- Inside the `withCredentials` block, the Vault path and secret values for the Nexus credentials (username and password) are specified.
+- In the `Pull Docker Image` stage, the Docker image is pulled from Nexus using the specified image name and tag.
+- In the `Rebuild and Push Docker Image` stage, you can modify or rebuild your Docker image as needed, and then push it to the Nexus Docker repository.
+
+Ensure that you have set up the Vault plugin and configured the `vault-credentials` in Jenkins, including the Vault path and the required secret values (username and password).
+
+Make sure to replace `'https://your.nexus/repository'` with the actual URL of your Nexus Docker repository, and `'your-image:tag'` with the appropriate image name and tag.
+
+Configure the Nexus Docker registry credentials in Jenkins before running the pipeline, using the same `nexus-credentials` ID specified in the `withRegistry` steps.
+
+Customize the pipeline script according to your project's specific requirements, including any additional stages or steps you may need.
+
+After configuring the Jenkins pipeline script, you can trigger the pipeline manually or configure it to trigger automatically based on events such as code commits or schedule.

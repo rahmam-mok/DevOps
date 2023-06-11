@@ -1,0 +1,18 @@
+To validate the expiration date of an SSL certificate, you can follow these steps:
+
+1. Obtain the SSL certificate file (commonly with a `.crt` or `.pem` extension) you want to validate.
+2. Open a terminal or command prompt.
+3. Use the OpenSSL command-line tool to view the certificate details, including the expiration date:
+  ```
+  openssl x509 -in certificate.crt -noout -enddate
+  ```
+  Replace `certificate.crt` with the actual path to your certificate file.
+4. The output will display the expiration date and time in the following format:
+  ```
+  notAfter=MM DD HH:MM:SS YYYY GMT
+  ```
+  The `notAfter` field indicates the expiration date of the certificate.
+5. Compare the expiration date displayed with the current date to determine if the certificate is still valid.
+
+Please note that the displayed date and time are in UTC/GMT. Additionally, keep in mind that certificate expiration dates should be checked periodically to ensure the security and validity of your SSL certificate.
+

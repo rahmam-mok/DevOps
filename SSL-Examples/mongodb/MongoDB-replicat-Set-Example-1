@@ -1,0 +1,156 @@
+#Example Ansible playbook that installs and configures a MongoDB replica set on Red Hat Enterprise Linux 8
+
+
+---
+- name: Install and configure MongoDB replica set
+  hosts: your_host_name
+  become: yes
+
+  vars:
+    mongodb_version: "4.4"  # Set the desired MongoDB version
+    replica_set_name: "myReplicaSet"  # Set the desired replica set name
+    mongodb_data_dir: "/data/db"  # Set the desired MongoDB data directory
+
+  tasks:
+    - name: Add MongoDB repository
+      yum:
+        name: "https://repo.mongodb.org/yum/redhat/{{ ansible_distribution_major_version }}/mongodb-org/{{ mongodb_version }}/x86_64/RPMS/mongodb-org-{{ mongodb_version }}-1.el{{ ansible_distribution_major_version }}.x86_64.rpm"
+        state: present
+
+    - name: Install MongoDB package
+      yum:
+        name: mongodb-org
+        state: present
+
+    - name: Start and enable mongod service
+      service:
+        name: mongod
+        state: started
+        enabled: yes
+
+    - name: Configure MongoDB replica set
+      shell: |
+        echo "rs.initiate()" | mongo
+      when: inventory_hostname == groups['your_host_name'][0]  # Execute only on the first host in the group
+
+    - name: Wait for MongoDB replica set initialization
+      pause:
+        seconds: 20
+      when: inventory_hostname == groups['your_host_name'][0]  # Execute only on the first host in the group
+
+    - name: Get MongoDB replica set configuration
+      shell: |
+        echo "cfg = rs.conf()" | mongo --quiet
+      register: replica_set_config
+      when: inventory_hostname == groups['your_host_name'][0]  # Execute only on the first host in the group
+
+    - name: Update MongoDB replica set configuration
+      set_fact:
+        replica_set_config: "{{ replica_set_config.stdout }}"
+      when: inventory_hostname == groups['your_host_name'][0]  # Execute only on the first host in the group
+
+    - name: Join MongoDB replica set
+      shell: |
+        echo "{{ replica_set_config }}" | mongo --quiet
+        echo "rs.add(\"{{ inventory_hostname }}\")" | mongo --quiet
+      when: inventory_hostname != groups['your_host_name'][0]  # Execute on all hosts except the first one
+
+
+
+
+Please note the following:
+
+Replace your_host_name with the target host or group of hosts where you want to install and configure the MongoDB replica set.
+Set the desired version for MongoDB by updating the mongodb_version variable.
+Set the desired replica set name by updating the replica_set_name variable.
+Set the desired MongoDB data directory by updating the mongodb_data_dir variable.
+Before running the playbook:
+
+Ensure that you have Ansible installed on your local machine.
+Place the playbook in a file (e.g., install_mongodb_replica_set.yml).
+Run the playbook using the ansible-playbook command:
+
+ansible-playbook install_mongodb_replica_set.yml
+
+This playbook adds the MongoDB repository, installs the MongoDB package, starts and enables the mongod service, configures the MongoDB replica set on the first host, 
+waits for the initialization of the replica set, retrieves the replica set configuration, and joins the remaining hosts to the replica set.
+
+
+#########################################
+
+
+---
+name: Install and Configure MongoDB Replica Set
+  hosts: mongodb_servers
+  become: yes
+  vars:
+    mongodb_version: "4.4"
+    replica_set_name: "myreplicaset"
+    mongodb_data_path: "/var/lib/mongodb"
+    mongodb_log_path: "/var/log/mongodb"
+  tasks:
+name: Import MongoDB public GPG key
+      rpm_key:
+        key: https://www.mongodb.org/static/pgp/server-{{ mongodb_version }}.asc
+        state: present
+
+name: Add MongoDB repository
+      yum_repository:
+        name: mongodb-org-{{ mongodb_version }}
+        description: MongoDB Repository
+        baseurl: https://repo.mongodb.org/yum/redhat/8/mongodb-org/{{ mongodb_version }}/x86_64/
+        gpgcheck: yes
+        gpgkey: https://www.mongodb.org/static/pgp/server-{{ mongodb_version }}.asc
+        enabled: yes
+
+name: Install MongoDB Enterprise package
+      yum:
+        name: mongodb-enterprise
+        state: present
+
+name: Create MongoDB data and log directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+"{{ mongodb_data_path }}"
+"{{ mongodb_log_path }}"
+name: Configure MongoDB replica set
+      template:
+        src: mongodb.conf.j2
+        dest: /etc/mongod.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+name: Start MongoDB service
+      systemd:
+        name: mongod
+        state: started
+        enabled: yes
+```
+Create a file named `mongodb.conf.j2` in the same directory as your playbook and add the following content:
+```
+# MongoDB configuration file
+storage:
+  dbPath: "{{ mongodb_data_path }}"
+  journal:
+    enabled: true
+systemLog:
+  destination: file
+  path: "{{ mongodb_log_path }}/mongod.log"
+  logAppend: true
+  logRotate: reopen
+net:
+  bindIp: 0.0.0.0
+replication:
+  replSetName: "{{ replica_set_name }}"
+```
+To run the playbook, save it to a file (e.g., `configure_replicaset.yml`) and execute the following command:
+```
+ansible-playbook -i inventory_file configure_replicaset.yml
+
+
+
+

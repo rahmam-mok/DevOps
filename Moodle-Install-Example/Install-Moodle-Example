@@ -1,0 +1,144 @@
+#Ansible playbook scripts to custom install production ready Moodle on RedHat 
+
+Create a playbook file (e.g., install_moodle.yml) with the following content:
+
+
+---
+- name: Install Moodle on RHEL
+  hosts: your_host_name
+  become: yes
+
+  vars:
+    moodle_version: "3.11"  # Set the desired Moodle version
+    php_version: "7.4"  # Set the desired PHP version
+
+  tasks:
+    - name: Install EPEL repository
+      yum:
+        name: epel-release
+        state: present
+
+    - name: Install Apache web server
+      yum:
+        name: httpd
+        state: present
+
+    - name: Start and enable Apache service
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Install PHP and required PHP extensions
+      yum:
+        name:
+          - php
+          - php-mysqlnd
+          - php-xml
+          - php-intl
+          - php-zip
+          - php-gd
+          - php-opcache
+          - php-ldap
+        state: present
+
+    - name: Install MariaDB server
+      yum:
+        name: mariadb-server
+        state: present
+
+    - name: Start and enable MariaDB service
+      service:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    - name: Secure MariaDB installation
+      shell: mysql_secure_installation
+      args:
+        creates: /root/.mysql_secure_installation_completed
+
+    - name: Clone Moodle repository
+      git:
+        repo: "https://github.com/moodle/moodle.git"
+        dest: "/var/www/html/moodle"
+        version: "{{ moodle_version }}"
+        depth: 1
+
+    - name: Set ownership and permissions for Moodle directory
+      file:
+        path: "/var/www/html/moodle"
+        owner: apache
+        group: apache
+        mode: "0755"
+        recurse: yes
+
+    - name: Configure Moodle virtual host
+      template:
+        src: "moodle.conf.j2"
+        dest: "/etc/httpd/conf.d/moodle.conf"
+
+    - name: Restart Apache service
+      service:
+        name: httpd
+        state: restarted
+
+
+
+
+Create a Jinja2 template file named moodle.conf.j2 with the following content:
+
+
+<VirtualHost *:80>
+    ServerAdmin admin@example.com
+    DocumentRoot /var/www/html/moodle
+
+    <Directory /var/www/html/moodle>
+        Require all granted
+        AllowOverride All
+    </Directory>
+
+    ErrorLog /var/log/httpd/moodle_error.log
+    CustomLog /var/log/httpd/moodle_access.log combined
+</VirtualHost>
+
+
+
+Replace your_host_name with the target host or group of hosts where you want to install Moodle.
+Set the desired version for Moodle by updating the moodle_version variable.
+Set the desired version for PHP by updating the php_version variable.
+Run the playbook using the ansible-playbook command:
+
+
+ansible-playbook install_moodle.yml
+
+
+This playbook installs the necessary dependencies, including Apache web server, PHP, and MariaDB. It then clones the Moodle repository, sets ownership and permissions for the Moodle directory, configures the Apache virtual host, and restarts the Apache service.
+
+Please note that this playbook assumes you have the necessary permissions and dependencies installed on your system to run Moodle. Make sure to adjust any
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

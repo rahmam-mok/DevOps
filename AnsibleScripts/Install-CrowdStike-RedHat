@@ -1,0 +1,26 @@
+#Ansible scripts to install and configure crowd strike agents on Redhat Server
+
+
+---
+- name: Install and configure CrowdStrike agent
+ hosts: your_target_host
+ become: true
+ vars:
+   crowdstrike_agent_version: 6.43.0
+   crowdstrike_agent_installer: crowdstrike-agent-{{ crowdstrike_agent_version }}.rpm
+   crowdstrike_client_id: YOUR_CLIENT_ID
+   crowdstrike_client_secret: YOUR_CLIENT_SECRET
+
+ tasks:
+   - name: Download CrowdStrike agent installer
+     get_url:
+       url: "https://example.com/path/to/{{ crowdstrike_agent_installer }}"
+       dest: "/tmp/{{ crowdstrike_agent_installer }}"
+
+   - name: Install CrowdStrike agent
+     yum:
+       name: "/tmp/{{ crowdstrike_agent_installer }}"
+       state: present
+
+   - name: Register CrowdStrike agent
+     command: /opt/CrowdStrike/falconctl -s --cid="{{ crowdstrike_client_id }}" --csid="{{ crowdstrike_client_secret }}"

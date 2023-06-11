@@ -1,0 +1,84 @@
+#Ansible scripts to install and configure mongodb replica set on Redhat 8 and configure primary and secondaries and create databases and users with read write permission to a database and add user with read only permission 
+
+
+---
+- name: Install and Configure MongoDB Replica Set
+ hosts: mongodb_servers
+ become: yes
+ vars:
+   mongodb_version: "4.4"
+   replica_set_name: "myreplicaset"
+   mongodb_data_path: "/var/lib/mongodb"
+   mongodb_log_path: "/var/log/mongodb"
+   admin_username: "admin"
+   admin_password: "adminpassword"
+   db_name: "mydatabase"
+   rw_username: "readwriteuser"
+   rw_password: "readwritepassword"
+   ro_username: "readonlyuser"
+   ro_password: "readonlypassword"
+
+ tasks:
+   - name: Import MongoDB public GPG key
+     rpm_key:
+       key: https://www.mongodb.org/static/pgp/server-{{ mongodb_version }}.asc
+       state: present
+
+   - name: Add MongoDB repository
+     yum_repository:
+       name: mongodb-org-{{ mongodb_version }}
+       description: MongoDB Repository
+       baseurl: https://repo.mongodb.org/yum/redhat/8/mongodb-org/{{ mongodb_version }}/x86_64/
+       gpgcheck: yes
+       gpgkey: https://www.mongodb.org/static/pgp/server-{{ mongodb_version }}.asc
+       enabled: yes
+
+   - name: Install MongoDB Enterprise package
+     yum:
+       name: mongodb-enterprise
+       state: present
+
+   - name: Create MongoDB data and log directories
+     file:
+       path: "{{ item }}"
+       state: directory
+       mode: '0755'
+     loop:
+       - "{{ mongodb_data_path }}"
+       - "{{ mongodb_log_path }}"
+
+   - name: Configure MongoDB replica set
+     template:
+       src: mongodb.conf.j2
+       dest: /etc/mongod.conf
+       owner: root
+       group: root
+       mode: '0644'
+
+   - name: Start MongoDB service
+     systemd:
+       name: mongod
+       state: started
+       enabled: yes
+
+   - name: Configure MongoDB replica set initialization
+     shell: mongo --eval "rs.initiate({ _id: '{{ replica_set_name }}', members: [ { _id: 0, host: 'localhost:27017' } ]})"
+     args:
+       creates: /var/lib/mongodb/{{ replica_set_name }}.mongodb.lock
+
+   - name: Wait for MongoDB replica set initialization
+     pause:
+       seconds: 10
+
+   - name: Add secondary members to replica set
+     shell: mongo --eval "rs.add('localhost:27018')"
+     when: inventory_hostname != groups['mongodb_servers'][0]
+
+   - name: Create MongoDB admin user
+     shell: mongo --eval "db.getSiblingDB('admin').createUser({ user: '{{ admin_username }}', pwd: '{{ admin_password }}', roles: ['root'] })"
+
+   - name: Create MongoDB database and user with read-write permissions
+     shell: mongo --eval "use {{ db_name }}; db.createUser({ user: '{{ rw_username }}', pwd: '{{ rw_password }}', roles: [{ role: 'readWrite', db: '{{ db_name }}' }] })"
+
+   - name: Create MongoDB user with read-only permissions
+     shell: mongo --eval "use {{ db_name }}; db.createUser({ user: '{{ ro_username }}', pwd: '{{ ro_password }}', roles: [{ role: 'read', db: '{{ db_name }}' }] })"

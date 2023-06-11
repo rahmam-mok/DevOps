@@ -1,0 +1,88 @@
+#Here's an example of an Ansible playbook that installs and configures Tenable agents on Red Hat Enterprise Linux, Ubuntu, and CentOS:
+
+
+---
+- name: Install and configure Tenable agents on Red Hat, Ubuntu, and CentOS
+ hosts: all
+ become: true
+ vars:
+   tenable_agent_package_url: "https://path/to/tenable_agent.rpm"
+   tenable_agent_api_key: "your_api_key"
+
+ tasks:
+   - name: Download Tenable agent package
+     get_url:
+       url: "{{ tenable_agent_package_url }}"
+       dest: "/tmp/tenable_agent.rpm"
+     when: "'RedHat' in ansible_distribution"
+
+   - name: Download Tenable agent package
+     get_url:
+       url: "{{ tenable_agent_package_url }}"
+       dest: "/tmp/tenable_agent.deb"
+     when: "'Ubuntu' in ansible_distribution"
+
+   - name: Download Tenable agent package
+     get_url:
+       url: "{{ tenable_agent_package_url }}"
+       dest: "/tmp/tenable_agent.rpm"
+     when: "'CentOS' in ansible_distribution"
+
+   - name: Install Tenable agent on Red Hat
+     yum:
+       name: /tmp/tenable_agent.rpm
+       state: present
+     when: "'RedHat' in ansible_distribution"
+
+   - name: Install Tenable agent on Ubuntu
+     apt:
+       deb: "/tmp/tenable_agent.deb"
+       state: present
+     when: "'Ubuntu' in ansible_distribution"
+
+   - name: Install Tenable agent on CentOS
+     yum:
+       name: /tmp/tenable_agent.rpm
+       state: present
+     when: "'CentOS' in ansible_distribution"
+
+   - name: Configure Tenable agent
+     block:
+       - name: Configure Tenable agent on Red Hat
+         command: /opt/nessus_agent/sbin/nessuscli agent link --key={{ tenable_agent_api_key }}
+         when: "'RedHat' in ansible_distribution"
+
+       - name: Configure Tenable agent on Ubuntu
+         command: /opt/nessus_agent/sbin/nessuscli agent link --key={{ tenable_agent_api_key }}
+         when: "'Ubuntu' in ansible_distribution"
+
+       - name: Configure Tenable agent on CentOS
+         command: /opt/nessus_agent/sbin/nessuscli agent link --key={{ tenable_agent_api_key }}
+         when: "'CentOS' in ansible_distribution"
+
+   - name: Start Tenable agent service
+     block:
+       - name: Start Tenable agent service on Red Hat
+         service:
+           name: nessusagent
+           state: started
+         when: "'RedHat' in ansible_distribution"
+
+       - name: Start Tenable agent service on Ubuntu
+         service:
+           name: nessusagent
+           state: started
+         when: "'Ubuntu' in ansible_distribution"
+
+       - name: Start Tenable agent service on CentOS
+         service:
+           name: nessusagent
+           state: started
+         when: "'CentOS' in ansible_distribution"
+```
+
+Make sure to replace `"https://path/to/tenable_agent.rpm"` with the appropriate URL for the Tenable agent package, and `"your_api_key"` with your actual Tenable agent API key.
+
+This playbook assumes that you have already configured the necessary repositories and access to install packages via `yum` (Red Hat, CentOS) or `apt` (Ubuntu) on your target hosts.
+
+Remember to adjust this playbook according to your specific requirements and test it thoroughly before deploying it in a production environment.

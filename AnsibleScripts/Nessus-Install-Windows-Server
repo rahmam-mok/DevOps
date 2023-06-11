@@ -1,0 +1,43 @@
+#Ansible scripts to install and configure Nessus agents on Windows Server 2012
+
+
+
+# To install and configure Nessus agents on Windows Server 2012 using Ansible, you can follow these steps:
+
+# 1. Ensure you have the necessary Ansible prerequisites, including the Nessus agent installer for Windows.
+# 2. Create an Ansible playbook to install and configure the Nessus agent. For example, create a file called `install_nessus.yml` with the following content:
+
+# ```yaml
+---
+- name: Install and configure Nessus agent
+ hosts: your_target_host
+ become: true
+ vars:
+   nessus_agent_installer: NessusAgent-7.6.3-x64.msi
+   nessus_agent_key: YOUR_AGENT_KEY
+
+ tasks:
+   - name: Copy Nessus agent installer to the remote host
+     win_copy:
+       src: "/path/to/{{ nessus_agent_installer }}"
+       dest: "C:\\Temp\\{{ nessus_agent_installer }}"
+
+   - name: Install Nessus agent
+     win_shell: 'msiexec.exe /i "C:\\Temp\\{{ nessus_agent_installer }}" /qn'
+
+   - name: Register Nessus agent
+     win_shell: 'C:\\Program Files\\Tenable\\Nessus Agent\\nessuscli.exe agent link --key="{{ nessus_agent_key }}"'
+
+
+# 3. Replace `your_target_host` with the actual hostname or IP address of your Windows Server 2012 machine.
+# 4. Replace `YOUR_AGENT_KEY` with your actual Nessus agent key.
+# 5. Adjust the `nessus_agent_installer` variable to the filename of the Nessus agent installer for Windows.
+# 6. Save the playbook and execute it using the `ansible-playbook` command:
+
+# ```bash
+# ansible-playbook -i inventory.ini install_nessus.yml
+# ```
+
+# Remember to adjust the `inventory.ini` file to include the appropriate host or group of hosts you want to target.
+
+# This playbook will copy the Nessus agent installer to the remote Windows host, install it silently using the `/qn` flag, and register the agent using the provided agent key. Adjust the paths for the Nessus agent installer based on your environment.

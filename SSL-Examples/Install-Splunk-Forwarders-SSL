@@ -1,0 +1,28 @@
+To configure SSL on Splunk forwarders and use a 2048-bit key, you can follow these steps:
+
+1. Generate a 2048-bit SSL certificate and key pair that will be used for securing the communication between the Splunk forwarder and the Splunk indexer. You can use a tool like OpenSSL to generate the certificate and key.
+
+2. Place the SSL certificate and private key files in a secure location on the Splunk forwarder. The certificate file should have a `.crt` or `.pem` extension, and the private key file should have a `.key` extension.
+
+3. Open the Splunk forwarder configuration file (`inputs.conf`) using a text editor. The file is typically located in the `$SPLUNK_HOME/etc/system/local/` directory.
+
+4. Add the following configuration settings to enable SSL and specify the SSL certificate and key paths:
+
+  ```
+  [sslConfig]
+  enableSplunkdSSL = true
+  serverCert = <path_to_certificate_file>
+  serverPassword = <password_for_certificate_private_key>
+  ```
+
+  Replace `<path_to_certificate_file>` with the actual file path of the SSL certificate, and `<password_for_certificate_private_key>` with the password used to protect the private key, if applicable.
+
+5. Save the `inputs.conf` file.
+
+6. Restart the Splunk forwarder service to apply the changes.
+
+7. On the Splunk indexer, ensure that it is configured to accept SSL connections on port 8089. By default, Splunk listens on port 8089 for SSL connections, but you can verify this in the Splunk indexer's `web.conf` file (`$SPLUNK_HOME/etc/system/local/` directory).
+
+8. Restart the Splunk indexer service after making any necessary changes.
+
+After completing these steps, the Splunk forwarder will use SSL with a 2048-bit key to secure the communication with the Splunk indexer on port 8089. Ensure that the SSL certificate and private key are properly protected and kept confidential, as they are crucial for securing the communication between the forwarder and indexer.

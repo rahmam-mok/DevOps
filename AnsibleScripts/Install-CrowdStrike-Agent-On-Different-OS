@@ -1,0 +1,87 @@
+#Ansible scripts to install and configure appropriate crowd strike agents on redhat enterprise and Ubuntu and centos and Amazon Linux and Windows server
+
+---
+- name: Install and configure CrowdStrike agent
+ hosts: all
+ become: yes
+
+ tasks:
+   - name: Install CrowdStrike agent on Red Hat Enterprise Linux
+     when: "'RedHat' in ansible_distribution"
+     yum:
+       name: falcon-sensor
+       state: present
+
+   - name: Install CrowdStrike agent on Ubuntu
+     when: "'Ubuntu' in ansible_distribution"
+     apt:
+       name: falcon-sensor
+       state: present
+
+   - name: Install CrowdStrike agent on CentOS
+     when: "'CentOS' in ansible_distribution"
+     yum:
+       name: falcon-sensor
+       state: present
+
+   - name: Install CrowdStrike agent on Amazon Linux
+     when: "'Amazon' in ansible_distribution"
+     yum:
+       name: falcon-sensor
+       state: present
+
+   - name: Install CrowdStrike agent on Windows Server
+     when: "'Windows' in ansible_distribution"
+     win_chocolatey:
+       name: falcon-sensor
+       state: present
+
+   - name: Configure CrowdStrike agent
+     block:
+       - name: Register the agent with the CrowdStrike cloud
+         command: /opt/CrowdStrike/falconctl -s --cid={{ crowdstrike_cid }} --tags={{ crowdstrike_tags }}
+         args:
+           creates: /opt/CrowdStrike/.registration_complete
+
+       - name: Start the CrowdStrike agent
+         service:
+           name: falcon-sensor
+           state: started
+
+
+
+################Here's an example of an Ansible playbook that installs and configures the CrowdStrike agent on a Windows server:
+
+
+---
+- name: Install and configure CrowdStrike agent on Windows server
+ hosts: windows_server
+ gather_facts: false
+ become: true
+ vars:
+   crowdstrike_installer_url: "https://path/to/crowdstrike_installer.exe"
+   crowdstrike_cid: "your_cid"
+   crowdstrike_tags: "tag1,tag2,tag3"
+
+ tasks:
+   - name: Download CrowdStrike installer
+     win_get_url:
+       url: "{{ crowdstrike_installer_url }}"
+       dest: "C:\Path\to\crowdstrike_installer.exe"
+
+   - name: Install CrowdStrike agent
+     win_shell: "C:\Path\to\crowdstrike_installer.exe /install /quiet"
+     args:
+       creates: "C:\Program Files\CrowdStrike\CSFalconInstaller.log"
+
+   - name: Configure CrowdStrike agent
+     win_shell: "C:\Program Files\CrowdStrike\FalconSensor.exe -s --cid={{ crowdstrike_cid }} --tags={{ crowdstrike_tags }}"
+     args:
+       creates: "C:\Program Files\CrowdStrike\.registration_complete"
+
+
+#Ensure that you replace `"https://path/to/crowdstrike_installer.exe"`, `"your_cid"`, and `"tag1,tag2,tag3"` with the appropriate values for your environment.
+
+#In this example, the playbook assumes that you have already configured the Windows server as an Ansible target by setting up the necessary WinRM connection. Additionally, make sure you have the necessary permissions and access rights to install software and modify system settings on the target Windows server.
+
+#Remember to adjust this playbook according to your specific requirements and test it thoroughly before deploying it in a production environment.

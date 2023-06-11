@@ -1,0 +1,63 @@
+#Jenkins file and Docker file or scripts to pull moodle official Docker image through nexus proxy and rebuild the Docker image and push the Docker image back to nexus registry
+
+
+Jenkinsfile:
+```groovy
+pipeline {
+ agent any
+
+ stages {
+   stage('Pull Docker Image') {
+     steps {
+       script {
+         docker.withRegistry('https://nexus-registry-url', 'nexus-credentials-id') {
+           docker.image('nexus-proxy/moodle:latest').pull()
+         }
+       }
+     }
+   }
+
+   stage('Build and Push Docker Image') {
+     steps {
+       script {
+         docker.withRegistry('https://nexus-registry-url', 'nexus-credentials-id') {
+           docker.build('your-custom-moodle-image').push()
+         }
+       }
+     }
+   }
+ }
+}
+```
+
+Dockerfile:
+```Dockerfile
+# Base image
+FROM nexus-proxy/moodle:latest
+
+# Copy any additional files or configurations, if needed
+
+# Build instructions
+RUN <build instructions>
+
+# Set any necessary environment variables, if needed
+
+# Specify the port(s) to expose, if needed
+
+# Set the entry point or command, if needed
+
+# Additional Dockerfile instructions, if required
+
+# Start the application, if necessary
+CMD ["<command>"]
+```
+
+Please note that you need to replace `nexus-proxy` with the appropriate Nexus proxy URL, `nexus-registry-url` with the correct Nexus registry URL, and `nexus-credentials-id` with the Jenkins credentials ID containing the necessary Nexus registry authentication details.
+
+Make sure to modify the Dockerfile as needed to incorporate any additional files, configurations, or build instructions specific to your requirements.
+
+By using this Jenkinsfile, you can define a Jenkins pipeline with two stages. The first stage pulls the Moodle official Docker image through the Nexus proxy, and the second stage rebuilds the Docker image and pushes it back to the Nexus registry.
+
+Remember to configure Jenkins with the necessary plugins, including the Docker pipeline plugin and any required credentials for Nexus authentication.
+
+Feel free to adjust the Jenkinsfile and Dockerfile to suit your specific needs and environment.

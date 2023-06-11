@@ -1,0 +1,38 @@
+#absible scripts to install git gcc yarn on redhat 8
+
+
+---
+- name: Install Git, GCC, and Yarn on Red Hat 8
+  hosts: your_host_name
+  become: yes
+
+  tasks:
+    - name: Install Git
+      package:
+        name: git
+        state: present
+
+    - name: Install GCC
+      package:
+        name: gcc
+        state: present
+
+    - name: Install Yarn repository key
+      rpm_key:
+        key: https://dl.yarnpkg.com/rpm/pubkey.gpg
+        state: present
+
+    - name: Add Yarn repository
+      yum_repository:
+        name: yarn
+        description: Yarn Repository
+        baseurl: https://dl.yarnpkg.com/rpm/stable/8/$basearch/
+        gpgcheck: yes
+        enabled: yes
+        gpgkey: https://dl.yarnpkg.com/rpm/pubkey.gpg
+        state: present
+
+    - name: Install Yarn
+      package:
+        name: yarn
+        state: present

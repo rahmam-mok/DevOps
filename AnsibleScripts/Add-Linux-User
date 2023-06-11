@@ -1,0 +1,40 @@
+#Ansible scripts to add a user with ssh and sudoer access and enable password authentication
+
+---
+- name: Add a user with SSH and sudoer access and enable password authentication
+ hosts: your_host
+ become: true
+ vars:
+   new_username: "your_username"
+   new_user_password: "your_password"
+
+ tasks:
+   - name: Add a new user
+     user:
+       name: "{{ new_username }}"
+       password: "{{ new_user_password | password_hash('sha512') }}"
+       createhome: yes
+       shell: /bin/bash
+
+   - name: Add the new user to the sudoers file
+     copy:
+       content: "{{ new_username }} ALL=(ALL) NOPASSWD: ALL"
+       dest: /etc/sudoers.d/{{ new_username }}
+       mode: "0440"
+
+   - name: Enable password authentication for SSH
+     lineinfile:
+       path: /etc/ssh/sshd_config
+       regexp: '^PasswordAuthentication'
+       line: 'PasswordAuthentication yes'
+       state: present
+     notify:
+       - Restart SSH service
+
+ handlers:
+   - name: Restart SSH service
+     service:
+       name: sshd
+       state: restarted
+
+       

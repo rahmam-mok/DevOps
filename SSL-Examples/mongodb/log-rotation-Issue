@@ -1,0 +1,20 @@
+Created mongodb configuration file under /etc/logrotate.d/ and when I test it with command: logrotate -f /etc/logrotate.d/mongodb it works. However it’s not rotating the log daily 
+
+
+If the log rotation is not occurring daily as expected, there could be a few reasons to investigate. Here are some possible causes and solutions:
+
+1. Check logrotate's configuration: Confirm that logrotate's global configuration file (`/etc/logrotate.conf`) or any other included configuration files do not contain conflicting settings that override the MongoDB log rotation configuration. Make sure the `rotate` setting is not defined for MongoDB logs elsewhere.
+
+2. Verify the cron job: By default, logrotate is typically scheduled as a cron job to run daily. You can check the cron configuration by running `crontab -l` as the root user and ensuring that there is an entry for logrotate. The entry should resemble `@daily /usr/sbin/logrotate /etc/logrotate.conf`. If the cron job is missing or misconfigured, you can add or fix it by editing the crontab file using `crontab -e` as the root user.
+
+3. Verify logrotate's log file: Logrotate logs its activity to a file. Check the log file located at `/var/lib/logrotate/logrotate.status` or `/var/log/logrotate/logrotate.log` to see if any error messages are reported. These log files can provide insights into any issues encountered during log rotation.
+
+4. Check MongoDB's log file permissions: Ensure that the MongoDB log file (`/var/log/mongodb/mongod.log` or the specified path) has appropriate permissions that allow logrotate to access and rotate it. Logrotate needs sufficient permissions to read, rename, and compress the log file.
+
+5. Verify the system's date and time: Log rotation is based on the system's date and time. If the system's date or time is incorrect, it may affect the scheduling of log rotation. Ensure that the system's clock is accurately set and synchronized.
+
+6. Restart logrotate service: After making any changes or adjustments, it's a good practice to restart the logrotate service to ensure the changes take effect. Use the command `sudo service logrotate restart` or `sudo systemctl restart logrotate.service` depending on your system.
+
+By investigating these potential causes, you should be able to determine why the log rotation is not occurring daily and resolve the issue accordingly.
+
+

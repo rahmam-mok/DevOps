@@ -1,0 +1,75 @@
+#Ansible scripts to install and configure splunk forwarder on redhat enterprise and Ubuntu and centos and Amazon Linux and Windows server
+
+
+---
+- name: Install and configure Splunk Universal Forwarder
+ hosts: all
+ become: yes
+
+ tasks:
+   - name: Install Splunk Universal Forwarder on Red Hat Enterprise Linux
+     when: "'RedHat' in ansible_distribution"
+     yum:
+       name: splunkforwarder
+       state: present
+
+   - name: Install Splunk Universal Forwarder on Ubuntu
+     when: "'Ubuntu' in ansible_distribution"
+     apt:
+       name: splunkforwarder
+       state: present
+
+   - name: Install Splunk Universal Forwarder on CentOS
+     when: "'CentOS' in ansible_distribution"
+     yum:
+       name: splunkforwarder
+       state: present
+
+   - name: Install Splunk Universal Forwarder on Amazon Linux
+     when: "'Amazon' in ansible_distribution"
+     yum:
+       name: splunkforwarder
+       state: present
+
+   - name: Install Splunk Universal Forwarder on Windows Server
+     when: "'Windows' in ansible_distribution"
+     win_chocolatey:
+       name: splunkuniversalforwarder
+       state: present
+
+   - name: Configure Splunk Universal Forwarder
+     block:
+       - name: Configure inputs.conf
+         template:
+           src: templates/inputs.conf.j2
+           dest: /opt/splunkforwarder/etc/system/local/inputs.conf
+         notify:
+           - Restart Splunk Forwarder
+
+       - name: Configure outputs.conf
+         template:
+           src: templates/outputs.conf.j2
+           dest: /opt/splunkforwarder/etc/system/local/outputs.conf
+         notify:
+           - Restart Splunk Forwarder
+
+ handlers:
+   - name: Restart Splunk Forwarder
+     service:
+       name: splunkforwarder
+       state: restarted
+
+
+# #Make sure to have the following directory structure for templates:
+
+# ```
+# .
+# ├── playbook.yml
+# └── templates
+#    ├── inputs.conf.j2
+#    └── outputs.conf.j2
+# ```
+
+# The `inputs.conf.j2` and `outputs.conf.j2` files inside the `templates` directory should contain the configuration settings for your Splunk Universal Forwarder. You can customize these files according to your needs.
+
+# Remember to adjust this playbook and the template files according to your specific requirements and test it thoroughly before deploying it in a production environment.

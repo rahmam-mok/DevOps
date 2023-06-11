@@ -1,0 +1,31 @@
+
+#Ansible scripts to install and configure tenable agents on windows server
+
+
+---
+- name: Install and configure Tenable agents on Windows Server
+ hosts: windows_server
+ gather_facts: false
+ become: true
+ vars:
+   tenable_agent_package_url: "https://path/to/tenable_agent.msi"
+   tenable_agent_api_key: "your_api_key"
+
+ tasks:
+   - name: Download Tenable agent package
+     win_get_url:
+       url: "{{ tenable_agent_package_url }}"
+       dest: "C:\\Temp\\tenable_agent.msi"
+
+   - name: Install Tenable agent
+     win_package:
+       path: "C:\\Temp\\tenable_agent.msi"
+       arguments: "/qn /norestart"
+
+   - name: Configure Tenable agent
+     win_command: "C:\\Program Files\\Tenable\\Nessus Agent\\agent.exe link --key={{ tenable_agent_api_key }}"
+
+   - name: Start Tenable agent service
+     win_service:
+       name: "Tenable Nessus Agent"
+       state: started

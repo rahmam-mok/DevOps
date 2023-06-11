@@ -1,0 +1,42 @@
+To install Learning Locker on Red Hat Enterprise 8, you can follow these general steps:
+
+Ensure that your Red Hat Enterprise 8 system is up to date with the latest packages by running the following command:
+   ```
+   sudo dnf update
+   ```
+
+Install the required dependencies. Learning Locker is built on Node.js, so you need to have Node.js and npm (Node Package Manager) installed. You can install them using the following command:
+   ```
+   sudo dnf install nodejs
+   ```
+
+Once Node.js and npm are installed, you can proceed to install Learning Locker. Start by cloning the Learning Locker repository from GitHub using the following command:
+   ```
+   git clone https://github.com/LearningLocker/learninglocker.git
+   ```
+
+Change your working directory to the cloned repository:
+   ```
+   cd learninglocker
+   ```
+
+Install the necessary dependencies for Learning Locker using npm:
+   ```
+   npm install
+   ```
+
+After the dependencies are installed, you need to configure Learning Locker. Copy the example environment file and make necessary adjustments:
+   ```
+   cp .env.example .env
+   nano .env
+   ```
+   Use a text editor like nano to modify the .env file and configure the necessary settings such as database connection details and other environment variables.
+
+Once you've configured the .env file, you can build and start Learning Locker using the following command:
+   ```
+   npm run build && npm run start
+   ```
+   This will build the application and start the server. You should see output indicating that the server is running and listening on a specific port.
+
+Finally, you can access Learning Locker by opening a web browser and entering the URL with the appropriate port. For example, if Learning Locker is running on the local machine with default settings, you can access it by visiting http://localhost:3000/.
+Please note that these steps provide a general outline for installing Learning Locker on Red Hat Enterprise 8. Depending on your specific requirements and environment, additional steps or configuration might be necessary. It's recommended to consult the official Learning Locker documentation for more detailed instructions.

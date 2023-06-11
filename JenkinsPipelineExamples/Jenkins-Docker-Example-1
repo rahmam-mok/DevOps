@@ -1,0 +1,70 @@
+#example of a Jenkinsfile and Dockerfile that utilize Vault to securely retrieve GitHub and Nexus credentials. The Jenkinsfile reads the credentials from Vault, clones the GitHub repository, uses the Dockerfile to pull the Moodle official Docker image through a Nexus proxy, makes changes to the Docker image, rebuilds it, and pushes it back to the Nexus registry.
+
+
+
+Jenkinsfile:
+
+###############################################
+
+pipeline {
+    agent any
+    
+    stages {
+        stage('Retrieve Credentials from Vault') {
+            steps {
+                script {
+                    def githubCredentials = vaultRead('secret/github')
+                    def nexusCredentials = vaultRead('secret/nexus')
+                    
+                    // Set credentials as environment variables
+                    env.GITHUB_USERNAME = githubCredentials.username
+                    env.GITHUB_PASSWORD = githubCredentials.password
+                    env.NEXUS_USERNAME = nexusCredentials.username
+                    env.NEXUS_PASSWORD = nexusCredentials.password
+                }
+            }
+        }
+        
+        stage('Clone GitHub Repository') {
+            steps {
+                git credentialsId: 'github-credentials', url: 'https://github.com/your-repo.git'
+            }
+        }
+        
+        stage('Build and Push Docker Image') {
+            steps {
+                sh 'docker build -t myimage:latest .'
+                withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                    sh 'docker login -u $NEXUS_USERNAME -p $NEXUS_PASSWORD nexus.example.com'
+                    sh 'docker tag myimage:latest nexus.example.com/myimage:latest'
+                    sh 'docker push nexus.example.com/myimage:latest'
+                }
+            }
+        }
+    }
+}
+
+def vaultRead(path) {
+    // Implementation to read credentials from Vault
+    // You need to implement the Vault integration here
+}
+
+
+
+##############DockerFile#####################################
+
+FROM nexus.example.com/moodle:latest
+
+# Make necessary changes to the Docker image
+# ...
+
+# Example: Copy custom configuration file to the image
+COPY config.php /var/www/html/config.php
+
+
+###############
+Please note that the above Jenkinsfile assumes you have a Vault integration in place to securely retrieve the credentials. You would need to implement the vaultRead function to connect to Vault, read the required secrets, and return them in the appropriate format.
+
+In the Jenkinsfile, the vaultRead function is a placeholder and needs to be implemented according to your Vault integration. It should handle the authentication with Vault, retrieve the secrets, and return them as an object with username and password properties.
+
+Make sure to replace 'https://github.com/your-repo.git' with the actual URL of your GitHub repository and 'nexus.example.com' with the correct address of your Nexus registry.

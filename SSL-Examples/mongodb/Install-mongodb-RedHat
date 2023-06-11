@@ -1,0 +1,33 @@
+---
+name: Install MongoDB Enterprise
+  hosts: mongodb_servers
+  become: true
+  vars:
+    mongodb_version: "4.4"
+  tasks:
+name: Import MongoDB public GPG key
+      rpm_key:
+        key: https://www.mongodb.org/static/pgp/server-{{ mongodb_version }}.asc
+        state: present
+
+name: Add MongoDB repository
+      yum_repository:
+        name: mongodb-org-{{ mongodb_version }}
+        description: MongoDB Repository
+        baseurl: https://repo.mongodb.org/yum/redhat/8/mongodb-org/{{ mongodb_version }}/x86_64/
+        gpgcheck: yes
+        gpgkey: https://www.mongodb.org/static/pgp/server-{{ mongodb_version }}.asc
+        enabled: yes
+
+name: Install MongoDB Enterprise package
+      yum:
+        name: mongodb-enterprise
+        state: present
+
+name: Start MongoDB service
+      systemd:
+        name: mongod
+        state: started
+        enabled: yes
+
+        

@@ -1,0 +1,46 @@
+#Ansible scripts to install and configure splunk forwarder on windows server
+
+
+
+---
+- name: Install and configure Splunk Universal Forwarder on Windows Server
+ hosts: windows_server
+ gather_facts: false
+ become: true
+ vars:
+   splunkforwarder_package_url: "https://path/to/splunkforwarder.msi"
+   splunkforwarder_inputs_conf: "C:\\Program Files\\SplunkUniversalForwarder\\etc\\system\\local\\inputs.conf"
+   splunkforwarder_outputs_conf: "C:\\Program Files\\SplunkUniversalForwarder\\etc\\system\\local\\outputs.conf"
+
+ tasks:
+   - name: Download Splunk Universal Forwarder package
+     win_get_url:
+       url: "{{ splunkforwarder_package_url }}"
+       dest: "C:\\Temp\\splunkforwarder.msi"
+
+   - name: Install Splunk Universal Forwarder
+     win_package:
+       path: "C:\\Temp\\splunkforwarder.msi"
+       arguments: "/quiet /norestart"
+
+   - name: Copy inputs.conf configuration file
+     win_copy:
+       src: "path/to/local/inputs.conf"
+       dest: "{{ splunkforwarder_inputs_conf }}"
+
+   - name: Copy outputs.conf configuration file
+     win_copy:
+       src: "path/to/local/outputs.conf"
+       dest: "{{ splunkforwarder_outputs_conf }}"
+
+   - name: Restart Splunk Universal Forwarder
+     win_service:
+       name: SplunkForwarder
+       state: restarted
+```
+
+#Make sure to replace `"https://path/to/splunkforwarder.msi"`, `"path/to/local/inputs.conf"`, and `"path/to/local/outputs.conf"` with the appropriate URLs and local paths for your environment.
+
+#This playbook assumes that you have already configured the necessary WinRM connection to the Windows Server host.
+
+#Remember to adjust this playbook according to your specific requirements and test it thoroughly before deploying it in a production environment.

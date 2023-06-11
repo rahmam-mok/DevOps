@@ -1,0 +1,89 @@
+#Ansible scripts to verify OS and install and configure appropriate crowd strike agents depending on whether os is redhat and Ubuntu and centos and Amazon Linux and Windows server if os is right os
+
+
+---
+- name: Install and configure CrowdStrike agent
+ hosts: your_target_hosts
+ become: true
+ vars:
+   crowdstrike_agent_package_redhat: falcon-sensor.rpm
+   crowdstrike_agent_package_ubuntu: falcon-sensor.deb
+   crowdstrike_agent_package_centos: falcon-sensor.rpm
+   crowdstrike_agent_package_amazon_linux: falcon-sensor.rpm
+   crowdstrike_agent_package_windows: falcon-sensor.msi
+   crowdstrike_sensor_id: YOUR_SENSOR_ID
+   crowdstrike_client_id: YOUR_CLIENT_ID
+   crowdstrike_client_secret: YOUR_CLIENT_SECRET
+
+ tasks:
+   - name: Verify operating system - Red Hat
+     block:
+       - fail:
+           msg: "Unsupported operating system: {{ ansible_distribution }}"
+         when: ansible_distribution not in ['RedHat']
+
+       - name: Install CrowdStrike agent on Red Hat
+         yum:
+           name: "/path/to/{{ crowdstrike_agent_package_redhat }}"
+           state: present
+
+       - name: Configure CrowdStrike agent
+         command: /opt/CrowdStrike/falconctl -s --cid={{ crowdstrike_client_id }} --csid={{ crowdstrike_sensor_id }} --apiserver-host={{ crowdstrike_client_secret }}
+
+     when: ansible_distribution == 'RedHat'
+
+   - name: Verify operating system - CentOS
+     block:
+       - fail:
+           msg: "Unsupported operating system: {{ ansible_distribution }}"
+         when: ansible_distribution not in ['CentOS']
+
+       - name: Install CrowdStrike agent on CentOS
+         yum:
+           name: "/path/to/{{ crowdstrike_agent_package_centos }}"
+           state: present
+
+       - name: Configure CrowdStrike agent
+         command: /opt/CrowdStrike/falconctl -s --cid={{ crowdstrike_client_id }} --csid={{ crowdstrike_sensor_id }} --apiserver-host={{ crowdstrike_client_secret }}
+
+     when: ansible_distribution == 'CentOS'
+
+   - name: Verify operating system - Ubuntu
+     block:
+       - fail:
+           msg: "Unsupported operating system: {{ ansible_distribution }}"
+         when: ansible_distribution not in ['Ubuntu']
+
+       - name: Install CrowdStrike agent on Ubuntu
+         apt:
+           deb: "/path/to/{{ crowdstrike_agent_package_ubuntu }}"
+           state: present
+
+       - name: Configure CrowdStrike agent
+         command: /opt/CrowdStrike/falconctl -s --cid={{ crowdstrike_client_id }} --csid={{ crowdstrike_sensor_id }} --apiserver-host={{ crowdstrike_client_secret }}
+
+     when: ansible_distribution == 'Ubuntu'
+
+   - name: Verify operating system - Amazon Linux
+     block:
+       - fail:
+           msg: "Unsupported operating system: {{ ansible_distribution }}"
+         when: ansible_distribution not in ['Amazon']
+
+       - name: Install CrowdStrike agent on Amazon Linux
+         yum:
+           name: "/path/to/{{ crowdstrike_agent_package_amazon_linux }}"
+           state: present
+
+       - name: Configure CrowdStrike agent
+         command: /opt/CrowdStrike/falconctl -s --cid={{ crowdstrike_client_id }} --csid={{ crowdstrike_sensor_id }} --apiserver-host={{ crowdstrike_client_secret }}
+
+     when: ansible_distribution == 'Amazon'
+
+   - name: Verify operating system - Windows Server
+     block:
+       - fail:
+           msg: "Unsupported operating system: {{ ansible_distribution }}"
+         when: ansible_distribution not in ['Windows']
+
+         

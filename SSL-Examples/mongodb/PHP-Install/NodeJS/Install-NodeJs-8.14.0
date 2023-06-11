@@ -1,0 +1,40 @@
+#Ansible scripts to install nodes 8.14.0
+
+
+---
+- name: Install Node.js 8.14.0
+  hosts: your_host_name
+  become: yes
+
+  tasks:
+    - name: Download Node.js tarball
+      get_url:
+        url: "https://nodejs.org/dist/v8.14.0/node-v8.14.0-linux-x64.tar.gz"
+        dest: "/tmp/node-v8.14.0-linux-x64.tar.gz"
+
+    - name: Extract Node.js tarball
+      unarchive:
+        src: "/tmp/node-v8.14.0-linux-x64.tar.gz"
+        dest: "/opt/"
+        remote_src: yes
+        extra_opts: "--strip-components=1"
+
+    - name: Add Node.js binary path to system environment
+      lineinfile:
+        dest: /etc/profile.d/node.sh
+        line: 'export PATH=$PATH:/opt/bin'
+        create: yes
+
+    - name: Load Node.js environment variables
+      shell: source /etc/profile.d/node.sh
+      args:
+        executable: /usr/bin/env bash
+        creates: /etc/profile.d/node.sh
+
+    - name: Verify Node.js installation
+      command: node --version
+      register: node_version
+
+    - name: Display Node.js version
+      debug:
+        var: node_version.stdout

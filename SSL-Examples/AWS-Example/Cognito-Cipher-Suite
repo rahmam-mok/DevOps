@@ -1,0 +1,11 @@
+To configure a strong cipher suite for AWS Cognito, you can follow these general steps:
+
+1. Open the AWS Management Console and navigate to the AWS Cognito service.
+2. Select the user pool for which you want to configure the cipher suite.
+3. In the left navigation pane, choose "Security" and then "General settings."
+4. Scroll down to the "Security Configuration" section and click on "Edit."
+5. In the "Cognito HTTPS" section, you can configure the cipher suites by selecting the desired options.
+6. Choose a strong cipher suite that provides a balance between security and compatibility with client devices.
+7. Once you have made the necessary changes, click on "Save Changes" to apply the new cipher suite configuration.
+
+It's important to note that the available cipher suite options may vary depending on the AWS region you are operating in and the specific version of AWS Cognito. Additionally, always ensure that the chosen cipher suite is compatible with your client devices to avoid any connectivity issues.

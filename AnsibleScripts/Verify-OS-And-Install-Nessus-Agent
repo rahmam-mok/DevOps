@@ -1,0 +1,84 @@
+#Ansible scripts to verify OS and install and configure appropriate Nessus agents depending on whether os is redhat and Ubuntu and centos and Amazon Linux and Windows server if os is right os
+
+---
+- name: Install and configure Nessus agent
+ hosts: your_target_hosts
+ become: true
+ vars:
+   nessus_agent_package_redhat: NessusAgent-8.4.0-es7.x86_64.rpm
+   nessus_agent_package_ubuntu: NessusAgent_8.4.0_ubuntu1110_amd64.deb
+   nessus_agent_package_centos: NessusAgent-8.4.0-es7.x86_64.rpm
+   nessus_agent_package_amazon_linux: NessusAgent-8.4.0-es7.x86_64.rpm
+   nessus_agent_package_windows: NessusAgent-8.4.0-win64.msi
+   nessus_agent_key: YOUR_AGENT_KEY
+
+ tasks:
+   - name: Verify operating system - Red Hat
+     block:
+       - fail:
+           msg: "Unsupported operating system: {{ ansible_distribution }}"
+         when: ansible_distribution not in ['RedHat']
+
+       - name: Install Nessus agent on Red Hat
+         yum:
+           name: "/path/to/{{ nessus_agent_package_redhat }}"
+           state: present
+
+     when: ansible_distribution == 'RedHat'
+
+   - name: Verify operating system - CentOS
+     block:
+       - fail:
+           msg: "Unsupported operating system: {{ ansible_distribution }}"
+         when: ansible_distribution not in ['CentOS']
+
+       - name: Install Nessus agent on CentOS
+         yum:
+           name: "/path/to/{{ nessus_agent_package_centos }}"
+           state: present
+
+     when: ansible_distribution == 'CentOS'
+
+   - name: Verify operating system - Ubuntu
+     block:
+       - fail:
+           msg: "Unsupported operating system: {{ ansible_distribution }}"
+         when: ansible_distribution not in ['Ubuntu']
+
+       - name: Install Nessus agent on Ubuntu
+         apt:
+           deb: "/path/to/{{ nessus_agent_package_ubuntu }}"
+           state: present
+
+     when: ansible_distribution == 'Ubuntu'
+
+   - name: Verify operating system - Amazon Linux
+     block:
+       - fail:
+           msg: "Unsupported operating system: {{ ansible_distribution }}"
+         when: ansible_distribution not in ['Amazon']
+
+       - name: Install Nessus agent on Amazon Linux
+         yum:
+           name: "/path/to/{{ nessus_agent_package_amazon_linux }}"
+           state: present
+
+     when: ansible_distribution == 'Amazon'
+
+   - name: Verify operating system - Windows Server
+     block:
+       - fail:
+           msg: "Unsupported operating system: {{ ansible_distribution }}"
+         when: ansible_distribution not in ['Windows']
+
+       - name: Copy Nessus agent installer to the remote host
+         win_copy:
+           src: "/path/to/{{ nessus_agent_package_windows }}"
+           dest: "C:\\Temp\\{{ nessus_agent_package_windows }}"
+
+       - name: Install Nessus agent on Windows Server
+         win_shell: 'msiexec.exe /i "C:\\Temp\\{{ nessus_agent_package_windows }}" /qn'
+
+     when: ansible_os_family == 'Windows'
+
+     

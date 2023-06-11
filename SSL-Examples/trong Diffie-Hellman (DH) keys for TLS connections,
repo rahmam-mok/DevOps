@@ -1,0 +1,48 @@
+To configure Windows Server 2012 to allow strong Diffie-Hellman (DH) keys for TLS connections, you can follow these steps:
+
+1. Open the Group Policy Editor by pressing the Windows key + R, typing `gpedit.msc`, and pressing Enter.
+
+2. In the Group Policy Editor, navigate to `Computer Configuration -> Administrative Templates -> Network -> SSL Configuration Settings`.
+
+3. Double-click on the `Minimum SSL/TLS version supported` policy setting.
+
+4. Select the "Enabled" option.
+
+5. In the dropdown menu, choose the highest TLS version supported by your environment, such as "TLS 1.2".
+
+6. Click "OK" to save the changes.
+
+7. Next, navigate to `Computer Configuration -> Administrative Templates -> Network -> SSL Configuration Settings -> SSL Cipher Suite Order`.
+
+8. Double-click on the `SSL Cipher Suite Order` policy setting.
+
+9. Select the "Enabled" option.
+
+10. In the "SSL Cipher Suites" text box, enter or modify the list of cipher suites to include strong DH key exchange:
+
+   ```
+   TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
+   TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
+   TLS_DHE_RSA_WITH_AES_256_CBC_SHA256,
+   TLS_DHE_RSA_WITH_AES_128_CBC_SHA256
+   ```
+
+   These cipher suites utilize the Diffie-Hellman key exchange algorithm and provide strong security.
+
+11. Click "OK" to save the changes.
+
+12. Close the Group Policy Editor.
+
+13. To apply the new configuration, open a Command Prompt as an administrator.
+
+14. Run the following command to update the Group Policy:
+
+   ```
+   gpupdate /force
+   ```
+
+   This will force an immediate update of the Group Policy settings.
+
+15. Restart the server for the changes to take effect.
+
+After restarting, Windows Server 2012 will allow the specified strong Diffie-Hellman key exchange cipher suites for TLS connections. It's important to ensure that the cipher suites you choose are supported by the applications and clients that will communicate with the server.

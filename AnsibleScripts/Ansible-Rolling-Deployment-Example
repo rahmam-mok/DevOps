@@ -1,0 +1,64 @@
+To perform rolling deployments of Java applications on AWS EC2 instances behind an AWS Load Balancer using Ansible, you can follow these steps:
+
+1. Install Ansible: Ensure that Ansible is installed on your local machine from where you will run the deployment scripts.
+
+2. Set up your Ansible project: Create a new directory for your Ansible project and navigate to it.
+
+3. Create an Ansible inventory file: Create a file named `inventory.ini` in your project directory and define your EC2 instance hosts in it. For example:
+
+  ```plaintext
+  [webserver]
+  ec2-instance-1 ansible_host=IP1
+  ec2-instance-2 ansible_host=IP2
+  ```
+
+  Replace `ec2-instance-1` and `ec2-instance-2` with your actual EC2 instance names or host aliases, and `IP1` and `IP2` with the corresponding IP addresses.
+
+4. Create an Ansible playbook: Create a playbook file, e.g., `deploy.yml`, in your project directory and define the tasks for the deployment. Below is an example playbook:
+
+  ```yaml
+  ---
+  - hosts: webserver
+    become: true
+    tasks:
+      - name: Stop Java application
+        shell: systemctl stop java-app.service
+
+      - name: Copy new application JAR/WAR file
+        copy:
+          src: /path/to/new/application.jar
+          dest: /opt/application/application.jar
+          mode: 0644
+
+      - name: Start Java application
+        shell: systemctl start java-app.service
+  ```
+
+  Adjust the tasks according to your deployment needs. For example, stopping the Java application, copying the new JAR/WAR file, and starting the application.
+
+5. Create an Ansible role: If you have more complex deployment requirements, you can create an Ansible role. Inside your project directory, create a `roles` directory, and inside it, create a role for your deployment. Refer to the Ansible documentation for creating and organizing roles.
+
+6. Create a playbook for rolling deployments: Create a separate playbook file, e.g., `rolling_deploy.yml`, to perform the rolling deployments. Here's an example:
+
+  ```yaml
+  ---
+  - hosts: webserver
+    serial: 1
+    tasks:
+      - name: Deploy application
+        include_tasks: deploy.yml
+  ```
+
+  The `serial: 1` option ensures that each host in the inventory is deployed one at a time, enabling a rolling deployment.
+
+7. Configure AWS credentials: Set up your AWS credentials on your local machine. You can use environment variables or AWS CLI configuration files for this. Refer to the AWS documentation for configuring AWS credentials.
+
+8. Run the rolling deployment playbook: Open a terminal, navigate to your project directory, and run the following command:
+
+  ```plaintext
+  ansible-playbook -i inventory.ini rolling_deploy.yml
+  ```
+
+  Ansible will connect to each EC2 instance behind the Load Balancer one at a time and perform the rolling deployment tasks defined in the `deploy.yml` playbook.
+
+By following these steps, you can use Ansible to perform rolling deployments of Java applications on AWS EC2 instances behind an AWS Load Balancer. Customize the playbooks and tasks as per your specific application and deployment requirements.

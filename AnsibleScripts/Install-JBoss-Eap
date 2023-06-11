@@ -1,0 +1,49 @@
+
+#Ansible scripts to create jboss user and install jboss eap and configure jboss services to start automatically for system reboot
+
+---
+- name: Install JBoss EAP and configure services
+ hosts: your_target_host
+ become: true
+ vars:
+   jboss_user: jboss
+   jboss_group: jboss
+   jboss_home: /opt/jboss-eap-7.3.0
+
+ tasks:
+   - name: Create JBoss user
+     user:
+       name: "{{ jboss_user }}"
+       state: present
+       createhome: no
+
+   - name: Create JBoss group
+     group:
+       name: "{{ jboss_group }}"
+       state: present
+
+   - name: Set JBOSS_HOME environment variable for JBoss user
+     lineinfile:
+       dest: /home/{{ jboss_user }}/.bashrc
+       line: 'export JBOSS_HOME="{{ jboss_home }}"'
+       state: present
+
+   - name: Download JBoss EAP
+     get_url:
+       url: "https://example.com/path/to/jboss-eap-7.3.0.zip"
+       dest: "/tmp/jboss-eap-7.3.0.zip"
+
+   - name: Unzip JBoss EAP
+     unarchive:
+       src: "/tmp/jboss-eap-7.3.0.zip"
+       dest: "/opt"
+       remote_src: true
+       owner: "{{ jboss_user }}"
+       group: "{{ jboss_group }}"
+
+   - name: Configure JBoss services to start automatically
+     systemd:
+       name: "{{ jboss_home }}/bin/standalone.sh"
+       state: started
+       enabled: yes
+       daemon_reload: yes

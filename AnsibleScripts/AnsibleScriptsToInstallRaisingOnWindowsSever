@@ -1,0 +1,48 @@
+To log in to an AWS Windows Server instance and install the Raising Server, you can use the following Ansible playbook as a starting point:
+
+```yaml
+---
+- name: Login to AWS Windows Server and install Raising Server
+ hosts: windows_server
+ gather_facts: false
+ become: true
+ vars:
+   aws_access_key: "your_aws_access_key"
+   aws_secret_key: "your_aws_secret_key"
+   ec2_region: "your_ec2_region"
+   instance_id: "your_instance_id"
+   raising_server_installer_url: "https://path/to/raising_server_installer.exe"
+
+ tasks:
+   - name: Install AWS CLI
+     win_chocolatey:
+       name: awscli
+       state: present
+
+   - name: Configure AWS credentials
+     win_command: aws configure set aws_access_key_id {{ aws_access_key }} && aws configure set aws_secret_access_key {{ aws_secret_key }} && aws configure set default.region {{ ec2_region }}
+
+   - name: Download Raising Server installer
+     win_get_url:
+       url: "{{ raising_server_installer_url }}"
+       dest: "C:\\Temp\\raising_server_installer.exe"
+
+   - name: Install Raising Server
+     win_command: C:\\Temp\\raising_server_installer.exe /quiet
+
+   - name: Restart Raising Server service
+     win_service:
+       name: RaisingServer
+       state: restarted
+```
+
+Make sure to replace the placeholders with the actual values:
+
+- `"your_aws_access_key"` and `"your_aws_secret_key"` with your AWS access key and secret key.
+- `"your_ec2_region"` with the region where your Windows Server instance is located (e.g., "us-east-1").
+- `"your_instance_id"` with the ID of your Windows Server instance.
+- `"https://path/to/raising_server_installer.exe"` with the URL to the Raising Server installer executable.
+
+This playbook assumes that you have already configured the necessary AWS CLI credentials on your Ansible control machine.
+
+Remember to adjust this playbook according to your specific requirements, such as modifying the paths, filenames, and installer options, and test it thoroughly before deploying it in a production environment.

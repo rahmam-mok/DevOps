@@ -1,0 +1,63 @@
+To configure a Jenkins pipeline with Ansible scripts for rolling deployments of Java applications on AWS EC2 instances behind an AWS Load Balancer, you can follow these steps:
+
+1. Set up Jenkins: Install and set up Jenkins on a server or your local machine.
+
+2. Install necessary Jenkins plugins: In the Jenkins dashboard, go to "Manage Jenkins" -> "Manage Plugins" -> "Available" and install the following plugins:
+  - Pipeline
+  - AWS Steps Plugin
+  - Ansible Plugin
+
+3. Create a new Jenkins pipeline job: Create a new Jenkins pipeline job by clicking on "New Item" and selecting "Pipeline" as the job type. Enter a name for the job and click "OK".
+
+4. Configure Jenkins pipeline: In the pipeline configuration, under the "Pipeline" section, choose the "Pipeline script" option. Enter the following script as an example:
+
+  ```groovy
+  pipeline {
+      agent any
+
+      stages {
+          stage('Checkout') {
+              steps {
+                  // Checkout your application code from version control system
+                  // e.g., Git or Subversion
+                  checkout scm
+              }
+          }
+
+          stage('Build') {
+              steps {
+                  // Build your Java application using Maven or Gradle
+                  // e.g., Maven: sh 'mvn clean package'
+                  //       Gradle: sh 'gradle clean build'
+                  sh 'mvn clean package'
+              }
+          }
+
+          stage('Deploy') {
+              steps {
+                  // Use Ansible playbook for rolling deployment
+                  ansiblePlaybook(
+                      colorized: true,
+                      inventory: 'path/to/inventory.ini',
+                      playbook: 'path/to/ansible/playbook.yml',
+                      extras: '-e "application_version=1.0.0"'
+                  )
+              }
+          }
+      }
+  }
+  ```
+
+  Customize the script according to your project's needs. Make sure to specify the correct paths for the inventory file, Ansible playbook, and any additional parameters required for the deployment.
+
+5. Set up Ansible playbooks: Create your Ansible playbooks for deploying the Java application on the EC2 instances. This playbook can include tasks such as stopping the current application, copying the new build artifact, and starting the application. Ensure that you use the appropriate Ansible modules and tasks to interact with the EC2 instances and AWS services.
+
+6. Configure AWS credentials in Jenkins: In the Jenkins dashboard, go to "Manage Jenkins" -> "Configure System". Scroll down to the "Global credentials" section and add your AWS credentials. These credentials will be used by the AWS Steps plugin to interact with AWS services during the deployment.
+
+7. Save the pipeline configuration.
+
+8. Trigger the Jenkins pipeline: You can trigger the pipeline manually or configure it to run automatically when changes are pushed to your version control system.
+
+When the pipeline is triggered, Jenkins will execute the defined stages. The code will be checked out, the Java application will be built, and then Ansible will perform the rolling deployment on the EC2 instances behind the AWS Load Balancer.
+
+Make sure to customize the pipeline script, inventory, Ansible playbooks, and any other configuration according to your specific project requirements.

@@ -1,0 +1,57 @@
+---
+- name: Install PHP 7.4 with pecl-redis
+  hosts: your_host_name
+  become: yes
+
+  tasks:
+    - name: Add Ondřej Surý PPA repository for PHP
+      apt_repository:
+        repo: ppa:ondrej/php
+        state: present
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install PHP 7.4
+      apt:
+        name: php7.4
+        state: present
+
+    - name: Install PHP 7.4 extensions
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - php7.4-cli
+        - php7.4-common
+        - php7.4-dev
+        - php7.4-json
+        - php7.4-opcache
+        - php7.4-readline
+        - php7.4-xml
+
+    - name: Install pecl-redis
+      shell: pecl install redis
+      args:
+        executable: /usr/bin/env bash
+        creates: /etc/php/7.4/mods-available/redis.ini
+
+    - name: Enable pecl-redis extension
+      shell: echo "extension=redis.so" > /etc/php/7.4/mods-available/redis.ini
+      args:
+        executable: /usr/bin/env bash
+        creates: /etc/php/7.4/cli/conf.d/20-redis.ini
+
+    - name: Enable pecl-redis extension for FPM
+      copy:
+        content: "extension=redis.so"
+        dest: /etc/php/7.4/fpm/conf.d/20-redis.ini
+      notify:
+        - Restart PHP-FPM
+
+  handlers:
+    - name: Restart PHP-FPM
+      service:
+        name: php7.4-fpm
+        state: restarted

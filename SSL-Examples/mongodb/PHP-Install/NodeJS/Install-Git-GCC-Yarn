@@ -1,0 +1,37 @@
+#Ansible scripts to install git gcc yarn
+
+
+---
+- name: Install Git, GCC, and Yarn
+  hosts: your_host_name
+  become: yes
+
+  tasks:
+    - name: Install Git
+      apt:
+        name: git
+        state: present
+
+    - name: Install GCC
+      apt:
+        name: gcc
+        state: present
+
+    - name: Add Yarn repository key
+      apt_key:
+        url: https://dl.yarnpkg.com/debian/pubkey.gpg
+        state: present
+
+    - name: Add Yarn repository
+      apt_repository:
+        repo: "deb https://dl.yarnpkg.com/debian/ stable main"
+        state: present
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Yarn
+      apt:
+        name: yarn
+        state: present

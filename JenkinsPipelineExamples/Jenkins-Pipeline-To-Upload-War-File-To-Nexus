@@ -1,0 +1,65 @@
+To read Nexus login credentials from Vault and upload WAR files to a Nexus repository using Jenkins pipeline scripts, you can combine the Vault Plugin and the Nexus Platform Plugin. Here's an example of a Jenkins pipeline script that performs the upload:
+
+```groovy
+pipeline {
+   agent any
+
+   environment {
+       VAULT_CREDENTIALS = credentials('vault-credentials')
+   }
+
+   stages {
+       stage('Checkout') {
+           steps {
+               // Checkout your source code from version control system
+               // e.g., Git or Subversion
+               checkout scm
+           }
+       }
+
+       stage('Build and Package') {
+           steps {
+               // Build your Java application using Maven or Gradle
+               // e.g., Maven: sh 'mvn clean package'
+               //       Gradle: sh 'gradle clean build'
+               sh 'mvn clean package'
+           }
+       }
+
+       stage('Upload to Nexus') {
+           steps {
+               withCredentials([vaultSecret(credentialsId: 'vault-credentials', path: 'path/to/vault/secret', secretValues: [
+                   [$class: 'VaultSecret', path: 'username', secretValue: 'username'],
+                   [$class: 'VaultSecret', path: 'password', secretValue: 'password']
+               ])]) {
+                   nexusUpload nexusInstanceId: 'nexus-instance-id', credentialsId: 'nexus-credentials', groupId: 'your.groupId', repository: 'your-repo', version: '1.0.0', artifacts: [
+                       // Specify the WAR file to upload
+                       [
+                           artifactId: 'your-artifact-id',
+                           classifier: '',
+                           file: '**/*.war',
+                           type: 'war'
+                       ]
+                   ]
+               }
+           }
+       }
+   }
+}
+```
+
+Here's a breakdown of the changes to the previous script:
+
+- The `VAULT_CREDENTIALS` environment variable is defined to read the Vault credentials using the `vault-credentials` credentials ID.
+- The `withCredentials` block is added to wrap the `nexusUpload` step, allowing the credentials to be securely accessed from Vault.
+- Inside the `withCredentials` block, the Vault path and secret values for the Nexus credentials (username and password) are specified.
+
+Ensure that you have set up the Vault plugin and configured the `vault-credentials` in Jenkins, including the Vault path and the required secret values (username and password).
+
+Make sure to replace `'your.groupId'`, `'your-repo'`, and `'your-artifact-id'` with the appropriate values for your project.
+
+Configure the Nexus instance and credentials in Jenkins before running the pipeline. Ensure that the specified Nexus repository exists and has the necessary permissions for artifact uploads.
+
+Customize the pipeline script according to your project's specific requirements, including any additional stages or steps you may need.
+
+After configuring the Jenkins pipeline script, you can trigger the pipeline manually or configure it to trigger automatically based on events such as code commits or schedule.
