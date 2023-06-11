@@ -1,0 +1,64 @@
+To create a database in MongoDB and use Ansible to read the username and password from a vault server, you can modify the previous example playbook. Here's an updated version:
+
+```yaml
+---
+- name: Create MongoDB database and users
+  hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - credentials.yml
+
+  tasks:
+    - name: Create MongoDB database
+      community.mongodb.mongodb_db:
+        name: "{{ mongodb_database }}"
+        state: present
+
+    - name: Create read-only MongoDB user
+      community.mongodb.mongodb_user:
+        username: "{{ mongodb_read_only_user }}"
+        password: "{{ mongodb_read_only_password }}"
+        database: "{{ mongodb_database }}"
+        roles:
+          - { role: read, db: "{{ mongodb_database }}" }
+        state: present
+
+    - name: Create read-write MongoDB user
+      community.mongodb.mongodb_user:
+        username: "{{ mongodb_read_write_user }}"
+        password: "{{ mongodb_read_write_password }}"
+        database: "{{ mongodb_database }}"
+        roles:
+          - { role: readWrite, db: "{{ mongodb_database }}" }
+        state: present
+```
+
+In this playbook, we've added a task to create the MongoDB database using the `community.mongodb.mongodb_db` module. The `mongodb_database` variable specifies the name of the database you want to create.
+
+Ensure that the `credentials.yml` file includes the necessary variables:
+
+```yaml
+---
+mongodb_database: "mydatabase"
+mongodb_read_only_user: "readonlyuser"
+mongodb_read_only_password: "readonlypassword"
+mongodb_read_write_user: "readwriteuser"
+mongodb_read_write_password: "readwritepassword"
+```
+
+Encrypt the `credentials.yml` file using `ansible-vault`:
+
+```
+ansible-vault encrypt credentials.yml
+```
+
+To run the playbook and provide the vault password, use the following command:
+
+```
+ansible-playbook playbook.yml --ask-vault-pass
+```
+
+Remember to replace `playbook.yml` with the name of your playbook file.
+
+This playbook will create a MongoDB database, along with a read-only user and a read-write user for that database, using the provided credentials from the vault. Make sure you have the necessary permissions and network access to interact with the MongoDB instance. Adjust the playbook and variables as needed for your specific use case.
