@@ -1,0 +1,51 @@
+Ansible playbook that configures a MongoDB replica set with five servers, assigns priority values to each member, and includes an arbiter:
+
+```yaml
+---
+- name: Configure MongoDB replica set
+  hosts: all
+  become: true
+  tasks:
+    - name: Install MongoDB
+      apt:
+        name: mongodb
+        state: present
+
+    - name: Configure MongoDB replica set
+      command: mongo --eval 'rs.initiate()'
+      when: inventory_hostname == groups['mongodb_servers'][0]
+
+    - name: Add secondary members to replica set with priorities
+      command: mongo --eval 'rs.add("{{ groups["mongodb_servers"][0] }}:27017", { priority: 2 })'
+      when: inventory_hostname == groups['mongodb_servers'][1]
+
+    - name: Add secondary members to replica set with priorities
+      command: mongo --eval 'rs.add("{{ groups["mongodb_servers"][1] }}:27017", { priority: 1.5 })'
+      when: inventory_hostname == groups['mongodb_servers'][2]
+
+    - name: Add secondary members to replica set with priorities
+      command: mongo --eval 'rs.add("{{ groups["mongodb_servers"][2] }}:27017", { priority: 1 })'
+      when: inventory_hostname == groups['mongodb_servers'][3]
+
+    - name: Add arbiter member to replica set with priority 0
+      command: mongo --eval 'rs.addArb("{{ groups["mongodb_servers"][4] }}:27017", { priority: 0 })'
+      when: inventory_hostname == groups['mongodb_servers'][4]
+
+    - name: Make first server primary
+      command: mongo --eval 'rs.stepDown()'
+      when: inventory_hostname == groups['mongodb_servers'][0]
+```
+
+In this playbook, we have added an additional task to include the arbiter member. The arbiter member does not store data but participates in the voting process during elections. The first server (server1) is still set as the primary with a priority of 2, the second server (server2) as a secondary member with a priority of 1.5, the third server (server3) as a secondary member with a priority of 1, the fourth server (server4) as a secondary member with a priority of 1, and the fifth server (server5) is added as an arbiter with a priority of 0.
+
+Ensure you update the inventory file (`inventory.ini`) with the correct hostnames or IP addresses of your MongoDB servers, including the arbiter.
+
+Execute the playbook using the `ansible-playbook` command:
+
+```
+ansible-playbook -i inventory.ini mongodb_replica_set.yml
+```
+
+This playbook will install MongoDB on all servers, initialize the replica set on the first server, add the remaining servers as secondary members and the arbiter with the specified priorities, and finally make the first server the primary.
+
+Please note that this playbook assumes you have SSH access to the MongoDB servers and the necessary privileges to install packages and execute MongoDB commands.
