@@ -1,0 +1,37 @@
+---
+- name: Dynamic Hostname Actions
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Get hostname
+      shell: hostname
+      register: hostname_output
+
+    - name: Extract last three characters of hostname
+      set_fact:
+        hostname_last_three: "{{ hostname_output.stdout[-3:] }}"
+
+    - name: Add server as MongoDB primary
+      set_fact:
+        mongodb_priority: 2
+      when: hostname_last_three == "001"
+
+    - name: Add server as MongoDB secondary with priority 1.5
+      set_fact:
+        mongodb_priority: 1.5
+      when: hostname_last_three == "002"
+
+    - name: Add server as MongoDB secondary with priority 1
+      set_fact:
+        mongodb_priority: 1
+      when: hostname_last_three == "003" or hostname_last_three == "004"
+
+    - name: Add server as MongoDB arbiter with priority 0
+      set_fact:
+        mongodb_priority: 0
+      when: hostname_last_three == "005"
+
+    - name: Display MongoDB configuration
+      debug:
+        msg: "Server: {{ inventory_hostname }}, Priority: {{ mongodb_priority }}"
