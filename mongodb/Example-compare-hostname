@@ -1,0 +1,36 @@
+Here's an example Ansible playbook that dynamically retrieves the hostname of five different servers and executes specific code if the last three characters of the hostname match a given string:
+
+```yaml
+---
+- name: Dynamic Hostname Matching
+  hosts: all
+  gather_facts: no
+
+  vars:
+    target_string: "xyz"  # Change this to your desired string
+
+  tasks:
+    - name: Get hostname
+      shell: hostname
+      register: hostname_output
+
+    - name: Extract last three characters of hostname
+      set_fact:
+        hostname_last_three: "{{ hostname_output.stdout[-3:] }}"
+
+    - name: Execute specific code if hostname matches
+      block:
+        - name: Task to run if hostname matches
+          debug:
+            msg: "Hostname matches the target string"
+        rescue:
+          - name: Task to run if hostname does not match
+            debug:
+              msg: "Hostname does not match the target string"
+```
+
+In this playbook, we first use the `shell` module to retrieve the hostname of each server and store it in the `hostname_output` variable. Then, we use the `set_fact` module to extract the last three characters of the hostname and store them in the `hostname_last_three` variable.
+
+Finally, we use a block structure to run specific code if the extracted last three characters of the hostname match the `target_string`. If the hostname matches, the specified task within the `block` section will be executed. If the hostname does not match, the specified task within the `rescue` section will be executed.
+
+Make sure to update the `target_string` variable with your desired string to match against the hostname.
