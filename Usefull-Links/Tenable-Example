@@ -1,0 +1,21 @@
+To configure Tenable to perform a credentials scan on a Windows Server 2012 that has joined Active Directory, you can follow these steps:
+
+1. Ensure that the Windows Server 2012 is properly joined to the Active Directory domain. Verify that the server's network settings are correctly configured, and it is a member of the Active Directory domain.
+
+2. Obtain administrative or privileged credentials for the Windows Server 2012. These credentials should have sufficient permissions to perform a credentials scan on the server.
+
+3. Launch the Tenable vulnerability management solution, such as Nessus or Tenable.sc, and access the scan configuration settings.
+
+4. Create a new scan or edit an existing scan policy that you want to use for scanning the Windows Server 2012. Make sure the scan policy includes the option for performing a credentials-based scan.
+
+5. In the scan policy settings, locate the section related to credentials or authentication. Provide the Windows Server 2012's administrative credentials, including the username and password. Ensure that the username is in the format "DOMAIN\Username" to specify the Active Directory domain.
+
+6. Verify that the scan policy includes the appropriate plugins or checks for Windows Server 2012 vulnerabilities. Tenable typically provides a wide range of pre-configured plugins for various operating systems and software.
+
+7. Fine-tune the scan policy settings according to your requirements. This may include adjusting the scanning schedule, selecting specific scan targets, configuring scan exclusions, or enabling additional options like compliance checks.
+
+8. Save the scan policy configuration and initiate the scan against the Windows Server 2012. The scan should now utilize the provided Active Directory credentials to authenticate to the server during the scanning process.
+
+9. Monitor the scan progress and wait for the scan to complete. Once finished, you can review the scan results, which should include information about vulnerabilities, misconfigurations, or other security issues identified on the Windows Server 2012.
+
+By using Active Directory credentials for the scan, Tenable will be able to authenticate to the Windows Server 2012 as a domain user, allowing for a more comprehensive assessment of the server's security posture.
