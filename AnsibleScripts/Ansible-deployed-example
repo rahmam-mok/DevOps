@@ -1,0 +1,69 @@
+ Here's an example playbook that performs the steps you described for deregistering, deploying, restarting, and registering servers one at a time behind an AWS ELB:
+
+```yaml
+---
+- name: Deploy Java WAR on JBoss EAP Servers behind ELB
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    - elb_name: <your_elb_name>
+    - jboss_deploy_dir: /opt/jboss-eap/standalone/deployment/
+    - jboss_service_name: jboss-eap
+
+  tasks:
+    - name: Deregister server from ELB
+      ec2_elb:
+        name: "{{ elb_name }}"
+        state: absent
+        instances: "{{ item }}"
+      with_items: "{{ groups['jboss_eap_servers'] }}"
+
+    - name: Deploy WAR file
+      copy:
+        src: /path/to/deployment/package.war
+        dest: "{{ jboss_deploy_dir }}"
+        remote_src: yes
+        owner: jboss
+        group: jboss
+        mode: 0644
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['jboss_eap_servers'] }}"
+
+    - name: Restart JBoss service
+      service:
+        name: "{{ jboss_service_name }}"
+        state: restarted
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['jboss_eap_servers'] }}"
+
+    - name: Wait for JBoss service to start
+      wait_for:
+        port: 8080
+        delay: 10
+        timeout: 300
+        state: started
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['jboss_eap_servers'] }}"
+
+    - name: Register server with ELB
+      ec2_elb:
+        name: "{{ elb_name }}"
+        state: present
+        instances: "{{ item }}"
+      with_items: "{{ groups['jboss_eap_servers'] }}"
+```
+
+Make sure to replace `<your_elb_name>` with your ELB name. Adjust the `jboss_deploy_dir` and `jboss_service_name` variables to match your JBoss EAP deployment directory and service name.
+
+This playbook assumes you have a group of hosts (`jboss_eap_servers`) defined in your Ansible inventory, representing the JBoss EAP servers behind the ELB.
+
+The playbook performs the following steps for each server:
+
+1. Deregisters the server from the ELB using the `ec2_elb` module.
+2. Copies the Java WAR file to the JBoss EAP deployment directory using the `copy` module.
+3. Restarts the JBoss service using the `service` module.
+4. Waits for the JBoss service to start using the `wait_for` module.
+5. Registers the server back to the ELB using the `ec2_elb` module.
+
+By executing this playbook, the Java WAR file will be deployed one server at a time behind the ELB, and the JBoss service will be restarted and registered back to the ELB for each server.
