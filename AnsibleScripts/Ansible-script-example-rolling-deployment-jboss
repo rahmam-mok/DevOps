@@ -1,0 +1,97 @@
+---
+- name: Deploy Java WAR on JBoss EAP Servers behind ELB
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    - elb_name: <your_elb_name>
+    - jboss_deploy_dir: /opt/jboss-eap/standalone/deployment/
+    - jboss_service_name: jboss-eap
+
+  tasks:
+    - name: Deregister first server from ELB
+      ec2_elb:
+        name: "{{ elb_name }}"
+        state: absent
+        instances: "{{ groups['jboss_eap_servers'][0] }}"
+
+    - name: Deploy WAR file on first server
+      copy:
+        src: /path/to/deployment/package.war
+        dest: "{{ jboss_deploy_dir }}"
+        remote_src: yes
+        owner: jboss
+        group: jboss
+        mode: 0644
+      delegate_to: "{{ groups['jboss_eap_servers'][0] }}"
+
+    - name: Restart JBoss service on first server
+      service:
+        name: "{{ jboss_service_name }}"
+        state: restarted
+      delegate_to: "{{ groups['jboss_eap_servers'][0] }}"
+
+    - name: Wait for JBoss service to start on first server
+      wait_for:
+        port: 8080
+        delay: 10
+        timeout: 300
+        state: started
+      delegate_to: "{{ groups['jboss_eap_servers'][0] }}"
+
+    - name: Register first server with ELB
+      ec2_elb:
+        name: "{{ elb_name }}"
+        state: present
+        instances: "{{ groups['jboss_eap_servers'][0] }}"
+
+    - name: Wait for first server to be registered and healthy
+      wait_for:
+        timeout: 300
+        delay: 10
+        host: "{{ groups['jboss_eap_servers'][0] }}"
+        port: 8080
+        state: started
+
+    - name: Deregister second server from ELB
+      ec2_elb:
+        name: "{{ elb_name }}"
+        state: absent
+        instances: "{{ groups['jboss_eap_servers'][1] }}"
+
+    - name: Deploy WAR file on second server
+      copy:
+        src: /path/to/deployment/package.war
+        dest: "{{ jboss_deploy_dir }}"
+        remote_src: yes
+        owner: jboss
+        group: jboss
+        mode: 0644
+      delegate_to: "{{ groups['jboss_eap_servers'][1] }}"
+
+    - name: Restart JBoss service on second server
+      service:
+        name: "{{ jboss_service_name }}"
+        state: restarted
+      delegate_to: "{{ groups['jboss_eap_servers'][1] }}"
+
+    - name: Wait for JBoss service to start on second server
+      wait_for:
+        port: 8080
+        delay: 10
+        timeout: 300
+        state: started
+      delegate_to: "{{ groups['jboss_eap_servers'][1] }}"
+
+    - name: Register second server with ELB
+      ec2_elb:
+        name: "{{ elb_name }}"
+        state: present
+        instances: "{{ groups['jboss_eap_servers'][1] }}"
+
+    - name: Wait for second server to be registered and healthy
+      wait_for:
+        timeout: 300
+        delay: 10
+        host: "{{ groups['jboss_eap_servers'][1] }}"
+       
