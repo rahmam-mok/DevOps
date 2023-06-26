@@ -1,0 +1,72 @@
+Ansible playbook that installs MongoDB on Red Hat Enterprise Linux 8.6 and configures a replica set with one primary, one secondary, one secondary with priority 1.5, 
+---
+- name: Install and configure MongoDB replica set
+  hosts: your_servers
+  become: true
+  vars:
+    mongo_replica_set_name: myreplicaset
+    mongo_version: 4.4
+
+  tasks:
+    - name: Install MongoDB packages
+      yum:
+        name: mongodb-org
+        state: present
+        enablerepo: mongodb-org-{{ mongo_version }}
+      notify: Start MongoDB
+
+    - name: Configure MongoDB replica set
+      blockinfile:
+        path: /etc/mongod.conf
+        block: |
+          replication:
+            replSetName: {{ mongo_replica_set_name }}
+      notify: Restart MongoDB
+
+    - name: Restart MongoDB
+      systemd:
+        name: mongod
+        state: restarted
+
+    - name: Wait for MongoDB to start
+      wait_for:
+        port: 27017
+        timeout: 300
+
+    - name: Initialize MongoDB replica set
+      shell: mongo --eval "rs.initiate()"
+      when: inventory_hostname == groups['your_servers'][0]
+      register: rs_init_output
+      until: rs_init_output.stdout_lines[-1] is search("ok: [127.0.0.1]")
+
+    - name: Add MongoDB replica set members
+      shell: mongo --eval "rs.add('{{ inventory_hostname }}:27017', { priority: {{ item.priority }}, votes: 1 })"
+      with_items:
+        - { priority: 2 }
+        - { priority: 1.5 }
+        - { priority: 1 }
+      when: inventory_hostname != groups['your_servers'][0]
+
+    - name: Add MongoDB arbiter
+      shell: mongo --eval "rs.addArb('{{ inventory_hostname }}:27017', { priority: 0, votes: 0 })"
+      when: inventory_hostname != groups['your_servers'][0]
+
+  handlers:
+    - name: Start MongoDB
+      systemd:
+        name: mongod
+        state: started
+        enabled: yes
+```
+
+As before, replace `your_servers` with the appropriate host or group of hosts in your inventory file. Adjust the `mongo_replica_set_name` and `mongo_version` variables to match your desired replica set name and MongoDB version.
+
+To execute this playbook, save it to a file (e.g., `mongodb_setup.yml`) and run the following command:
+
+```bash
+ansible-playbook -i inventory_file mongodb_setup.yml
+```
+
+This playbook will install MongoDB, configure the replica set, and start the MongoDB service. The primary member will have a priority of 2, one secondary member will have a priority of 1.5, another secondary member will have a priority of 1, and an arbiter member will have a priority of 0.
+
+Please note that you may need to modify the playbook further to match your specific environment and requirements.
