@@ -1,0 +1,69 @@
+ Here's an example of a Jenkins pipeline script that pulls Moodle official Docker images through a Nexus proxy, scans the images for vulnerabilities using Trivy, generates HTML reports for the scan results, adds a new TXT file, rebuilds the image with build tags, and pushes the modified image to a Nexus private Docker registry:
+
+```groovy
+pipeline {
+    agent any
+
+    stages {
+        stage('Pull Docker Image') {
+            steps {
+                // Pull the Moodle official Docker image from Nexus proxy
+                sh 'docker pull <your-nexus-proxy-url>/<docker-repo>/<docker-image>:<tag>'
+            }
+        }
+
+        stage('Scan Docker Image') {
+            steps {
+                // Install Trivy (assuming it's already available in the Jenkins environment)
+                sh 'trivy --version'
+
+                // Scan the Docker image for vulnerabilities
+                sh 'trivy image <your-nexus-proxy-url>/<docker-repo>/<docker-image>:<tag>'
+
+                // Save the Trivy scan results in JSON format
+                sh 'trivy --format json --output trivy_report.json image <your-nexus-proxy-url>/<docker-repo>/<docker-image>:<tag>'
+
+                // Generate HTML report from the Trivy scan results
+                sh 'trivy --format template --template "@contrib/html.tpl" --output trivy_report.html image <your-nexus-proxy-url>/<docker-repo>/<docker-image>:<tag>'
+            }
+        }
+
+        stage('Modify Docker Image') {
+            steps {
+                // Copy a new TXT file to the Docker image
+                sh 'docker cp <path-to-your-file>/<file-name>.txt <container-name>:<path-inside-container>/<file-name>.txt'
+
+                // Rebuild the Docker image with build tags
+                sh 'docker build -t <your-nexus-private-registry-url>/<docker-repo>/<docker-image>:<new-tag> .'
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                // Push the modified Docker image to Nexus private Docker registry
+                sh 'docker push <your-nexus-private-registry-url>/<docker-repo>/<docker-image>:<new-tag>'
+            }
+        }
+    }
+}
+```
+
+In this script, adjust the following placeholders to match your setup:
+- `<your-nexus-proxy-url>`: The URL of your Nexus proxy.
+- `<docker-repo>`: The name of the Docker repository in Nexus.
+- `<docker-image>`: The name of the Moodle Docker image.
+- `<tag>`: The tag of the Moodle Docker image you want to pull.
+- `<path-to-your-file>`: The local path to the TXT file you want to add to the Docker image.
+- `<file-name>`: The name of the TXT file.
+- `<container-name>`: The name of the running container where you want to copy the TXT file.
+- `<path-inside-container>`: The path inside the container where you want to place the TXT file.
+- `<your-nexus-private-registry-url>`: The URL of your Nexus private Docker registry.
+- `<new-tag>`: The new tag you want to assign to the modified Docker image before pushing it.
+
+The pipeline consists of four stages:
+1. "Pull Docker Image": Pulls the Moodle Docker image from the Nexus proxy.
+2. "Scan Docker Image": Scans the Docker image for vulnerabilities using Trivy and generates JSON and HTML reports.
+3. "Modify Docker Image": Copies the new TXT file to the Docker image, rebuilds the image with build tags, and assigns a new tag to the image.
+4. "Push Docker Image": Pushes the modified Docker image to your Nexus private Docker registry.
+
+Make sure to customize the script based on your Jenkins configuration, including any authentication,
