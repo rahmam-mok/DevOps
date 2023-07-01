@@ -1,0 +1,43 @@
+Here's an updated version of the Ansible playbook that automates patching Red Hat Enterprise Linux 8 servers without updating Java or JDK, checks if a reboot is required, reboots the servers if necessary, and verifies that the servers have been successfully rebooted:
+
+```yaml
+---
+- name: Patch and reboot RHEL 8 servers
+  hosts: rhel_servers
+  gather_facts: true
+
+  tasks:
+    - name: Exclude Java and JDK packages
+      yum:
+        name: '*'
+        state: latest
+        exclude: java,jdk
+      register: yum_result
+
+    - name: Check if reboot is required
+      shell: needs-restarting -r
+      register: reboot_check
+      changed_when: false
+      failed_when: false
+
+    - name: Reboot servers
+      reboot:
+      when: reboot_check.stdout != "0"
+
+    - name: Verify servers have been rebooted
+      wait_for_connection:
+        connect_timeout: 60
+        sleep: 10
+        delay: 10
+        timeout: 300
+      register: reboot_verify
+
+    - name: Print reboot status
+      debug:
+        msg: "Servers have been rebooted."
+      when: reboot_verify is succeeded
+```
+
+In this updated playbook, the `exclude` parameter is added to the `yum` task, specifying that the `java` and `jdk` packages should be excluded from the update. This ensures that Java and JDK packages are not updated during the patching process.
+
+Again, please make sure to replace `rhel_servers` with the appropriate group of servers in your Ansible inventory file. Remember to test this playbook in a non-production environment before applying it to production servers.
