@@ -1,0 +1,47 @@
+Here's an example of an Ansible playbook that automates patching Windows servers without updating Java or JDK, checks if a reboot is required, reboots the servers if necessary, and verifies that the servers have been successfully rebooted:
+
+```yaml
+---
+- name: Patch and reboot Windows servers
+  hosts: windows_servers
+  gather_facts: false
+  tasks:
+    - name: Install Windows updates
+      win_updates:
+        category_names:
+          - Critical Updates
+          - Security Updates
+          - Update Rollups
+          - Updates
+        state: installed
+      register: update_result
+
+    - name: Check if reboot is required
+      win_rebootcheck:
+      register: reboot_check
+
+    - name: Reboot servers
+      win_reboot:
+      when: reboot_check.reboot_required
+
+    - name: Verify servers have been rebooted
+      wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 5985
+        delay: 10
+        timeout: 300
+      register: reboot_verify
+
+    - name: Print reboot status
+      debug:
+        msg: "Servers have been rebooted."
+      when: reboot_verify is succeeded
+```
+
+In this example, replace `windows_servers` with the appropriate group of Windows servers in your Ansible inventory file. The playbook uses the `win_updates` module to install Windows updates, excluding Java or JDK packages.
+
+The `win_rebootcheck` module checks if a reboot is required, and the `win_reboot` module reboots the servers when necessary. The `wait_for` task waits for the server to become reachable after a reboot, ensuring that it has been successfully rebooted.
+
+Please note that Windows servers require proper configuration for Ansible to manage them, including PowerShell remoting and WinRM setup. Also, ensure you have the necessary privileges to patch and reboot the servers.
+
+Remember to test the playbook in a non-production environment before applying it to production servers.
