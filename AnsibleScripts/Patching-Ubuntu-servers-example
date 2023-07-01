@@ -1,0 +1,53 @@
+Here's an example of an Ansible playbook that automates patching Ubuntu servers without updating Java or JDK, checks if a reboot is required, reboots the servers if necessary, and verifies that the servers have been successfully rebooted:
+
+```yaml
+---
+- name: Patch and reboot Ubuntu servers
+  hosts: ubuntu_servers
+  gather_facts: true
+
+  tasks:
+    - name: Exclude Java and JDK packages
+      apt:
+        name: "*"
+        state: latest
+        update_cache: yes
+        only_upgrade: yes
+        allow_unauthenticated: yes
+        force_apt_get: yes
+        dpkg_options: "force-confdef,force-confold"
+        upgrade_dist: full-upgrade
+        autoremove: yes
+        install_recommends: no
+        hold_pkgs: "java,jdk"
+      register: apt_result
+
+    - name: Check if reboot is required
+      shell: needs-restarting -r
+      register: reboot_check
+      changed_when: false
+      failed_when: false
+
+    - name: Reboot servers
+      reboot:
+      when: reboot_check.stdout != "0"
+
+    - name: Verify servers have been rebooted
+      wait_for_connection:
+        connect_timeout: 60
+        sleep: 10
+        delay: 10
+        timeout: 300
+      register: reboot_verify
+
+    - name: Print reboot status
+      debug:
+        msg: "Servers have been rebooted."
+      when: reboot_verify is succeeded
+```
+
+In this example, make sure to replace `ubuntu_servers` with the appropriate group of servers in your Ansible inventory file. The playbook uses the `apt` module to update and upgrade packages, excluding the `java` and `jdk` packages using the `hold_pkgs` parameter.
+
+Please note that the `needs-restarting` command is used to check if a reboot is required, and it might not be available by default on Ubuntu. You may need to install the `yum-utils` package or a similar alternative that provides the `needs-restarting` functionality.
+
+As always, remember to test the playbook in a non-production environment before applying it to production servers.
