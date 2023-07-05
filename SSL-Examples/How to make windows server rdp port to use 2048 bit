@@ -1,0 +1,20 @@
+To configure the Remote Desktop Protocol (RDP) port on a Windows Server to use 2048-bit encryption, you can follow these steps:
+
+1. Open the Registry Editor by pressing `Windows Key + R` to open the Run dialog, then type `regedit` and press Enter.
+
+2. Navigate to the following registry key:
+   ```
+   HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp
+   ```
+
+3. Look for the DWORD value named `SecurityLayer`. If it doesn't exist, create it.
+
+4. Set the value of the `SecurityLayer` DWORD to `2`. This value represents SSL/TLS encryption.
+
+5. Look for the DWORD value named `MinEncryptionLevel`. If it doesn't exist, create it.
+
+6. Set the value of the `MinEncryptionLevel` DWORD to `3`. This value represents 2048-bit encryption.
+
+7. Restart the server for the changes to take effect.
+
+After completing these steps, the RDP port on your Windows Server will be configured to use 2048-bit encryption. This helps enhance the security of remote desktop connections by using stronger encryption algorithms.
