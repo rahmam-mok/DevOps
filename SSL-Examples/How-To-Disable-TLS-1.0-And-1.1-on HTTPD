@@ -1,0 +1,25 @@
+To disable TLS 1.0 and 1.1 in Apache HTTP Server (httpd), you need to modify the server configuration file. The specific steps may vary depending on your operating system and version of Apache, but here's a general outline:
+
+1. Locate the Apache configuration file. It is commonly named `httpd.conf` and is usually found in the `/etc/httpd/` or `/etc/apache2/` directory.
+
+2. Open the configuration file in a text editor.
+
+3. Search for the section that contains the SSL/TLS configuration. Look for lines that start with `SSLProtocol` or similar.
+
+4. Remove or comment out the entries for TLS 1.0 and 1.1 by adding a `#` at the beginning of those lines. It should look something like this:
+
+   ```
+   # SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1
+   ```
+
+   By commenting out the line, you are instructing Apache to ignore it.
+
+5. Save the configuration file.
+
+6. Restart the Apache service to apply the changes. The command to restart the service depends on your operating system. For example, on Ubuntu, you can use:
+
+   ```
+   sudo service apache2 restart
+   ```
+
+Once you've completed these steps, Apache HTTP Server should no longer support TLS 1.0 and 1.1, only allowing newer, more secure versions of TLS.
