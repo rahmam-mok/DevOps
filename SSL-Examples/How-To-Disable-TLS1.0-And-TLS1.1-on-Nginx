@@ -1,0 +1,33 @@
+To disable TLS 1.0 and 1.1 in Nginx, you'll need to modify the server configuration file. Here's a general guide on how to do it:
+
+1. Locate the Nginx configuration file for your website. It is typically named `nginx.conf` or located in the `/etc/nginx/` directory.
+
+2. Open the configuration file in a text editor.
+
+3. Locate the `ssl_protocols` directive. It specifies the SSL/TLS protocols that Nginx will support.
+
+4. Modify the `ssl_protocols` directive to disable TLS 1.0 and 1.1. Remove the `TLSv1` and `TLSv1.1` entries from the directive and include only the more secure protocols. For example, your updated `ssl_protocols` directive may look like this:
+
+   ```
+   ssl_protocols TLSv1.2 TLSv1.3;
+   ```
+
+   This configuration ensures that Nginx only supports TLS 1.2 and TLS 1.3, which are more secure.
+
+5. Save the configuration file.
+
+6. Verify the Nginx configuration for any syntax errors. Run the following command:
+
+   ```
+   nginx -t
+   ```
+
+   If there are no errors, proceed to the next step. Otherwise, fix the errors and run the command again.
+
+7. Restart the Nginx service to apply the changes. The command to restart the service depends on your operating system. For example, on Ubuntu, you can use:
+
+   ```
+   sudo service nginx restart
+   ```
+
+After completing these steps, Nginx should no longer support TLS 1.0 and 1.1, ensuring that only TLS 1.2 and TLS 1.3 are allowed for secure communication.
