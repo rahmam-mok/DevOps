@@ -1,0 +1,37 @@
+To determine which cipher suites are weak in Apache HTTP Server (httpd) and remove them, you can follow these general steps:
+
+1. Make sure you have OpenSSL installed on your system. OpenSSL provides the tools needed for cipher suite analysis.
+
+2. Open a terminal or command prompt and run the following command to test the available cipher suites:
+
+   ```
+   openssl ciphers -v 'ALL:eNULL' | awk '{print $2}' | sort | uniq
+   ```
+
+   This command will list all the available cipher suites.
+
+3. Analyze the output and identify the weak cipher suites that you want to remove. Weak cipher suites are typically those using outdated algorithms or offering weak encryption.
+
+4. Open the Apache configuration file (`httpd.conf`) in a text editor.
+
+5. Look for the SSL/TLS configuration section. It may include lines like `SSLCipherSuite` or `SSLProtocol`.
+
+6. Edit the `SSLCipherSuite` directive and remove the weak cipher suites from the list. Replace them with stronger cipher suites that are considered secure.
+
+   For example, if you want to remove the weak cipher suites using DES encryption, you can change the directive to something like:
+
+   ```
+   SSLCipherSuite HIGH:!aNULL:!eNULL:!3DES:!DES:!RC4:!MD5:!EXPORT:!LOW
+   ```
+
+   This configuration allows only cipher suites with high security levels and excludes the weak ones.
+
+7. Save the configuration file.
+
+8. Restart the Apache service to apply the changes. The command to restart the service depends on your operating system. For example, on Ubuntu, you can use:
+
+   ```
+   sudo service apache2 restart
+   ```
+
+After completing these steps, Apache HTTP Server should only support the stronger cipher suites that you have specified, removing the weak ones from the configuration.
