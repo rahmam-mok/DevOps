@@ -1,0 +1,23 @@
+To configure the Splunk forwarder on a Windows Server to use 2048-bit encryption for communication, you need to modify the `inputs.conf` file. Here's how you can do it:
+
+1. Open a text editor and locate the `inputs.conf` file for the Splunk forwarder. The file is typically located in the `$SPLUNK_HOME/etc/apps/SplunkUniversalForwarder/local/` directory. If the file doesn't exist, create it.
+
+2. Add the following configuration lines to the `inputs.conf` file:
+   ```
+   [splunktcp-ssl:your_input_name]
+   disabled = 0
+   sslCertPath = <path_to_your_ssl_certificate>
+   sslRootCAPath = <path_to_your_ssl_root_CA_certificate>
+   sslPassword = <password_for_the_private_key>
+   sslVersions = tls1.2
+   ```
+   Replace `your_input_name` with a descriptive name for your input. Provide the correct paths to your SSL certificate and SSL root CA certificate files. Set the `sslPassword` to the password for the private key, if applicable. The `sslVersions` setting specifies TLS version 1.2.
+
+3. Save the `inputs.conf` file.
+
+4. Restart the Splunk forwarder service to apply the changes. The command to restart the service may vary depending on your specific setup. For example, you can use the following command in PowerShell:
+   ```
+   Restart-Service -Name "SplunkForwarder"
+   ```
+
+After completing these steps, the Splunk forwarder on your Windows Server will be configured to use 2048-bit encryption for communication. Make sure to replace the placeholders with the appropriate values for your environment.
