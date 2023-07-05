@@ -1,0 +1,38 @@
+Sure! Here's an example Jenkins pipeline script that pulls the `moodle-phone-apache` image from Docker Hub through a Nexus proxy:
+
+```groovy
+pipeline {
+    agent any
+    
+    stages {
+        stage('Pull Image') {
+            steps {
+                script {
+                    def dockerImage = 'moodle-phone-apache'
+                    def dockerTag = 'latest'
+                    def dockerRegistry = 'docker.io'
+                    def dockerRepo = 'moodle'
+                    def nexusRepo = 'docker-proxy'
+                    
+                    def nexusURL = "http://nexus-server:8081/repository/${nexusRepo}/${dockerRegistry}/${dockerRepo}/${dockerImage}:${dockerTag}"
+                    
+                    docker.withRegistry('', 'nexus-credentials') {
+                        def customImage = docker.image(nexusURL)
+                        customImage.pull()
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+In this script, we define the necessary variables: `dockerImage`, `dockerTag`, `dockerRegistry`, `dockerRepo`, and `nexusRepo`. You need to replace `nexus-server` with the actual URL or IP address of your Nexus server.
+
+The `nexusURL` variable constructs the URL to the image in Nexus based on the provided variables. It follows the format `http://nexus-server:8081/repository/docker-proxy/docker.io/moodle/moodle-phone-apache:latest`.
+
+Within the `docker.withRegistry` block, we authenticate with Nexus using the `nexus-credentials` credential ID. Then, we use the `docker.image` method to define the custom image using the Nexus URL. Finally, we pull the image using `customImage.pull()`.
+
+Please make sure you have the necessary credentials configured in your Jenkins instance, with the appropriate username and password/token for accessing the Nexus server.
+
+Feel free to modify the script based on your specific setup and requirements.
