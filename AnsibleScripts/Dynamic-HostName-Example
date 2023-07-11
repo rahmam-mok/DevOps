@@ -1,0 +1,30 @@
+---
+- name: Get hostnames of servers and store based on pattern
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    server_list:
+      - server001.example.com
+      - server002.example.com
+      - server003.example.com
+      - server004.example.com
+
+  tasks:
+    - name: Gather hostnames
+      command: hostname
+      register: hostname_output
+      delegate_to: "{{ item }}"
+      with_items: "{{ server_list }}"
+
+    - name: Store hostnames based on pattern
+      set_fact:
+        primaryserver: "{{ item.stdout }}"
+      when: "'001' in item.stdout"
+      with_items: "{{ hostname_output.results }}"
+
+    - name: Store hostnames based on pattern
+      set_fact:
+        secondaryserver1: "{{ item.stdout }}"
+      when: "'002' in item.stdout"
+      with_items: "{{ hostname_output.results }}"
