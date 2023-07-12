@@ -1,0 +1,70 @@
+ Here's an updated version of the Ansible playbook to initialize a MongoDB replica set with custom priority and vote configurations for each member, and verify the successful initialization:
+
+```yaml
+---
+- name: Initialize MongoDB Replica Set
+  hosts: mongodb_servers
+  gather_facts: false
+  become: true
+
+  vars:
+    replica_set_name: myReplicaSet
+    members:
+      - name: primaryserver
+        host: mongo1.example.com
+        priority: 2
+        votes: 1
+      - name: secondaryserver1
+        host: mongo2.example.com
+        priority: 1.5
+        votes: 1
+      - name: secondaryserver2
+        host: mongo3.example.com
+        priority: 1
+        votes: 1
+      - name: arbiter
+        host: mongo4.example.com
+        priority: 0
+        votes: 0
+
+  tasks:
+    - name: Configure MongoDB Replica Set
+      mongodb_replica_set:
+        rs_name: "{{ replica_set_name }}"
+        members: "{{ members }}"
+        force_init: yes
+      register: rs_output
+
+    - name: Wait for MongoDB Replica Set initialization
+      wait_for:
+        host: "{{ members[0].host }}"
+        port: 27017
+        delay: 10
+        timeout: 180
+        state: started
+      retries: 10
+      register: mongodb_started
+
+    - name: Check if MongoDB Replica Set is initialized
+      command: mongo --quiet --eval "rs.status().ok == 1"
+      register: rs_status
+      changed_when: false
+
+    - name: Print initialization status
+      debug:
+        msg: "MongoDB Replica Set initialization {{ 'succeeded' if rs_status.stdout|int == 1 else 'failed' }}"
+```
+
+In this playbook, the `mongodb_servers` group of hosts is targeted. You can adjust the inventory or replace `mongodb_servers` with the appropriate group or individual hosts.
+
+The `members` variable is defined as a list of dictionaries, where each dictionary represents a member of the replica set. You can modify the `host`, `priority`, and `votes` values for each member as needed.
+
+The `mongodb_replica_set` Ansible module is used to configure the replica set. It specifies the replica set name (`rs_name`) and the members (`members`) based on the provided variable. The `force_init` parameter is set to "yes" to initialize the replica set.
+
+After configuring the replica set, the playbook waits for the MongoDB service on the primary node to start. The `wait_for` module is used to check the availability of the primary node's MongoDB service on port 27017. It retries 10 times with a delay of 10 seconds between attempts, and a timeout of 180 seconds.
+
+Once the wait is completed, the playbook executes a MongoDB command using the `command` module to check the status of the replica set. The `rs.status().ok == 1` query verifies if the replica set is initialized successfully. The result is stored in the `rs_status` variable.
+
+Finally, the playbook uses the `debug` module to print a message indicating whether the MongoDB replica set initialization succeeded or failed, based on the value of `rs_status.stdout`.
+
+Ensure you have the appropriate MongoDB-related Ansible modules and MongoDB tools installed for successful execution of this playbook.
