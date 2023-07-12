@@ -1,0 +1,22 @@
+Here's an example of an Ansible script to add the four members to a MongoDB replica set with the specified priorities and votes:
+
+```yaml
+---
+- name: Add MongoDB replica set members
+  hosts: mongodb_primary
+  become: true
+  tasks:
+    - name: Configure replica set
+      command: mongo --eval 'rs.reconfig({ "_id": "myReplicaSet", "members": [
+        { "_id": 0, "host": "first_member:27017", "priority": 2, "votes": 1 },
+        { "_id": 1, "host": "second_member:27017", "priority": 1.5, "votes": 1 },
+        { "_id": 2, "host": "third_member:27017", "priority": 1, "votes": 1 },
+        { "_id": 3, "host": "fourth_member:27017", "priority": 0, "votes": 0, "arbiterOnly": true }
+      ]})'
+```
+
+In this script, replace "first_member," "second_member," "third_member," and "fourth_member" with the appropriate hostnames or IP addresses of the respective MongoDB replica set members.
+
+Ensure that you have proper SSH access and Ansible configuration to execute this playbook against the MongoDB primary node. Modify the playbook accordingly if needed, based on your Ansible setup.
+
+Please note that the above script assumes you have a MongoDB replica set already set up, and you are running the playbook from the primary node. Adjust the parameters as required for your specific environment.
