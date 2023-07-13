@@ -1,0 +1,30 @@
+Here's an example of an Ansible script that adds a user with read-only permissions to MongoDB without using the `community.mongodb.mongodb_user` module:
+
+```yaml
+- name: Add read-only user to MongoDB
+  hosts: your_mongodb_host
+  vars:
+    mongodb_user: your_username
+    mongodb_password: your_password
+    mongodb_database: your_database
+  tasks:
+    - name: Create MongoDB user
+      become: yes
+      become_user: mongodb
+      command: "mongo --eval 'db.getSiblingDB(\"{{ mongodb_database }}\").createUser({ user: \"{{ mongodb_user }}\", pwd: \"{{ mongodb_password }}\", roles: [ { role: \"read\", db: \"{{ mongodb_database }}\" } ] })'"
+
+    - name: Restart MongoDB service
+      become: yes
+      become_user: root
+      service:
+        name: mongodb
+        state: restarted
+```
+
+Make sure to replace `your_mongodb_host`, `your_username`, `your_password`, and `your_database` with the appropriate values for your MongoDB setup.
+
+This script utilizes the `command` module to execute the `mongo` command in the MongoDB shell. The command creates a user with the specified username, password, and the `read` role for the given database using the `createUser` function.
+
+After creating the user, the script restarts the MongoDB service to apply the changes.
+
+Please keep in mind that executing commands directly may require additional error handling and validation to ensure the task's success.
