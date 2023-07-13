@@ -1,0 +1,28 @@
+If you prefer to avoid using the `community.mongodb.mongodb_user` module, you can achieve the same result by executing MongoDB commands directly using the `command` or `shell` module in Ansible. Here's an example script:
+
+```yaml
+- name: Add MongoDB user
+  hosts: your_mongodb_host
+  vars:
+    mongodb_user: your_username
+    mongodb_password: your_password
+    mongodb_database: your_database
+  tasks:
+    - name: Create MongoDB user
+      become: yes
+      become_user: mongodb
+      command: "mongo --eval 'db.createUser({ user: \"{{ mongodb_user }}\", pwd: \"{{ mongodb_password }}\", roles: [{ role: \"readWrite\", db: \"{{ mongodb_database }}\" }] })'"
+
+    - name: Restart MongoDB service
+      become: yes
+      become_user: root
+      service:
+        name: mongodb
+        state: restarted
+```
+
+This script uses the `command` module to execute the `mongo` command with the necessary arguments. The command creates a user with the specified username, password, and roles, directly in the MongoDB shell. Afterward, the script restarts the MongoDB service to apply the changes.
+
+Remember to replace `your_mongodb_host`, `your_username`, `your_password`, and `your_database` with the appropriate values for your MongoDB setup.
+
+Keep in mind that executing commands directly may require additional error handling and validation to ensure the task's success.
