@@ -1,0 +1,32 @@
+- name: Initialize MongoDB Replica Set
+  hosts: your_mongodb_hosts
+  vars:
+    mongodb_replica_set: your_replica_set_name
+    mongodb_primary: your_primary_host
+    mongodb_secondaries:
+      - host: your_secondary1
+        priority: 1.5
+        votes: 1
+      - host: your_secondary2
+        priority: 1
+        votes: 1
+    mongodb_arbiter:
+      - host: your_arbiter
+        priority: 0
+        votes: 0
+  tasks:
+    - name: Start MongoDB as a replica set primary
+      become: yes
+      become_user: mongodb
+      command: "mongod --replSet {{ mongodb_replica_set }} --bind_ip {{ mongodb_primary }}"
+
+    - name: Connect to MongoDB as a replica set primary
+      become: yes
+      become_user: mongodb
+      command: "mongo --host {{ mongodb_primary }} --eval 'rs.initiate()'"
+
+    - name: Add secondary nodes to the replica set
+      become: yes
+      become_user: mongodb
+      command: "mongo --host {{ mongodb_primary }} --eval 'rs.add(\"{{ item.host }}\", { priority: {{ item.priority }}, votes: {{ item.votes }} })'" 
+      loop: "{{ mongodb_secondaries + mongodb_arbiter }}"
