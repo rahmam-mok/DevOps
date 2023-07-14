@@ -1,0 +1,30 @@
+Here's an example of an Ansible script that adds a user with admin permissions to the "test" database in MongoDB without using the `community.mongodb.mongodb_user` module:
+
+```yaml
+- name: Add MongoDB admin user for test database
+  hosts: your_mongodb_host
+  vars:
+    mongodb_admin_user: admin_user
+    mongodb_admin_password: admin_password
+    mongodb_database: test
+  tasks:
+    - name: Create MongoDB admin user for test database
+      become: yes
+      become_user: mongodb
+      command: "mongo {{ mongodb_database }} --eval 'db.createUser({ user: \"{{ mongodb_admin_user }}\", pwd: \"{{ mongodb_admin_password }}\", roles: [ { role: \"dbAdmin\", db: \"{{ mongodb_database }}\" }, { role: \"readWrite\", db: \"{{ mongodb_database }}\" } ] })'"
+
+    - name: Restart MongoDB service
+      become: yes
+      become_user: root
+      service:
+        name: mongodb
+        state: restarted
+```
+
+Replace `your_mongodb_host`, `admin_user`, and `admin_password` with the appropriate values for your MongoDB setup.
+
+In this script, the `command` module is used to execute the `mongo` command in the MongoDB shell. The command creates an admin user with the specified username, password, and the `dbAdmin` and `readWrite` roles for the "test" database.
+
+After creating the admin user, the script restarts the MongoDB service to apply the changes.
+
+Remember to ensure appropriate error handling and validation in your Ansible playbook when executing commands directly.
