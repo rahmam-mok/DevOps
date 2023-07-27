@@ -1,0 +1,117 @@
+To install Moodle on Red Hat 8.8 using Ansible, you'll need to create an Ansible playbook. Below is a sample playbook that you can use as a starting point:
+
+```yaml
+---
+- name: Install Moodle on Red Hat 8.8
+  hosts: your_server
+  become: yes
+
+  tasks:
+    - name: Update package cache
+      dnf:
+        update_cache: yes
+
+    - name: Install required packages
+      dnf:
+        name:
+          - httpd
+          - mariadb-server
+          - php
+          - php-mysqlnd
+          - php-xml
+          - php-json
+          - php-zip
+          - php-gd
+          - php-intl
+          - php-opcache
+          - php-mbstring
+          - php-curl
+          - php-ldap
+          - php-xmlrpc
+          - php-soap
+        state: present
+
+    - name: Start and enable Apache
+      systemd:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Start and enable MariaDB
+      systemd:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    - name: Secure MariaDB installation
+      mysql_user:
+        name: root
+        host: localhost
+        password: your_root_password_here
+        login_user: root
+        login_password: ''
+        priv: '*.*:ALL,GRANT'
+        state: present
+      register: mysql_secure_result
+      ignore_errors: yes
+
+    - name: Create Moodle database
+      mysql_db:
+        name: moodle
+        collation: utf8mb4_general_ci
+        state: present
+        login_user: root
+        login_password: your_root_password_here
+
+    - name: Download Moodle
+      get_url:
+        url: "https://download.moodle.org/download.php/latest/stable??version=28&format=tar.gz"
+        dest: /tmp/moodle.tar.gz
+
+    - name: Extract Moodle
+      unarchive:
+        src: /tmp/moodle.tar.gz
+        dest: /var/www/html/
+        remote_src: yes
+        creates: /var/www/html/moodle
+
+    - name: Set Moodle directory permissions
+      file:
+        path: /var/www/html/moodle
+        owner: apache
+        group: apache
+        state: directory
+        recurse: yes
+
+    - name: Set Moodle data directory permissions
+      file:
+        path: /var/moodledata
+        owner: apache
+        group: apache
+        state: directory
+
+    - name: Configure Moodle virtual host
+      template:
+        src: moodle.conf.j2
+        dest: /etc/httpd/conf.d/moodle.conf
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      systemd:
+        name: httpd
+        state: restarted
+```
+
+Before running this playbook, make sure you have Ansible installed on your system. Also, replace `your_server` with the target server's IP or hostname, and replace `your_root_password_here` with the actual root password for the MariaDB server.
+
+In the playbook, we are updating the package cache, installing required packages (Apache, MariaDB, and PHP with necessary extensions), securing MariaDB, creating the Moodle database, downloading Moodle, and configuring Apache to serve Moodle. Additionally, we are setting appropriate permissions for the Moodle directory and data directory.
+
+To use this playbook, save it in a file, for example, `install_moodle.yml`. Then, execute the playbook using the following command:
+
+```bash
+ansible-playbook install_moodle.yml
+```
+
+Please note that this is a basic example, and you may need to adjust the playbook based on your specific environment and requirements. You can also create a `moodle.conf.j2` template file for Apache virtual host configuration if needed.
