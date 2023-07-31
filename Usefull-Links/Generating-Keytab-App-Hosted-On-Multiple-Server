@@ -1,0 +1,13 @@
+To generate a keytab when there are multiple servers hosting a web application using JBoss EAP (Enterprise Application Platform), you'll need to follow these general steps:
+
+1. **Configure Kerberos**: First, ensure that Kerberos is properly configured on your network and that all servers hosting the web application are part of the same Kerberos realm.
+
+2. **Create Service Principal**: Register a service principal for each server that will be hosting the web application in the Kerberos Key Distribution Center (KDC). Each service principal should be in the format `HTTP/server_hostname@REALM`, where "HTTP" is the service name, "server_hostname" is the hostname of the server, and "REALM" is the Kerberos realm.
+
+3. **Generate Keytab for Each Server**: On each server, generate a keytab file that contains the service principal's key for that specific server. You can use the appropriate tool based on your Kerberos implementation (e.g., MIT Kerberos `ktutil`, Active Directory `ktpass`) to generate the keytab file.
+
+4. **Configure JBoss EAP**: In the JBoss EAP configuration, you'll need to specify the path to the keytab file and the service principal for each server in the application's security configuration. The configuration file to update might vary depending on your JBoss EAP version and setup.
+
+5. **Test the Configuration**: After configuring the keytab and service principal for each server, test the setup to ensure that the web application can successfully authenticate using Kerberos. You can use a web browser that supports Kerberos authentication to access the web application on different servers and verify that authentication works as expected.
+
+Keep in mind that the exact steps and configurations might vary depending on your specific environment, JBoss EAP version, and Kerberos implementation. It's essential to refer to the documentation for JBoss EAP, your Kerberos setup, and consult with your system administrators or network security team for guidance specific to your organization's infrastructure.
