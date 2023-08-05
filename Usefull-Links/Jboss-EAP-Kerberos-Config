@@ -5,7 +5,7 @@ To enable Kerberos authentication for JBoss EAP and a Java web application on Re
    Open a terminal on your RedHat Enterprise Server and run the following command to install the required Kerberos packages:
 
    ```bash
-   sudo yum install krb5-workstation krb5-libs krb5-auth-dialog
+   sudo yum install krb5-workstation krb5-libs krb5-auth-dialog krb5-server
    ```
 
    This command will install the Kerberos client libraries and utilities needed for authentication.
