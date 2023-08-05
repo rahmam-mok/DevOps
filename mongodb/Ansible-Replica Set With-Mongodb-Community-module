@@ -1,0 +1,114 @@
+To initialize a MongoDB replica set, create an admin user, and set up databases and users with TLS and authentication enabled using Ansible, follow this example playbook. Make sure you have Ansible and the `community.mongodb` collection installed. Replace placeholders with your actual values:
+
+1. **Create an Ansible playbook** named `mongodb_setup.yml`:
+
+```yaml
+---
+- name: Configure MongoDB Replica Set and Set Up Users
+  hosts: your_mongodb_servers  # Replace with the appropriate host group
+  become: true
+  vars:
+    admin_password: your_admin_password
+    user1_password: user1_password
+    user2_password: user2_password
+    user3_password: user3_password
+
+  tasks:
+    - name: Initialize Replica Set
+      community.mongodb.mongodb_replicaset:
+        login_host: "{{ inventory_hostname }}"
+        login_port: 27030
+        replica_set: myReplicaSet
+        members:
+          - _id: 0
+            host: "{{ inventory_hostname }}:27030"
+            priority: 2
+            votes: 1
+          - _id: 1
+            host: "server2:27030"
+            priority: 1.5
+            votes: 1
+          - _id: 2
+            host: "server3:27030"
+            priority: 1
+            votes: 1
+          - _id: 3
+            host: "server4:27030"
+            arbiterOnly: true
+            priority: 0
+            votes: 0
+
+    - name: Create Admin User
+      community.mongodb.mongodb_user:
+        login_user: admin
+        login_password: "{{ admin_password }}"
+        login_host: "{{ inventory_hostname }}"
+        login_port: 27030
+        ssl: true
+        auth_mechanism: SCRAM-SHA-256
+        database: admin
+        name: admin
+        password: "{{ admin_password }}"
+        roles:
+          - userAdminAnyDatabase
+          - dbAdminAnyDatabase
+          - clusterAdmin
+
+    - name: Create Databases and Users
+      community.mongodb.mongodb_user:
+        login_user: admin
+        login_password: "{{ admin_password }}"
+        login_host: "{{ inventory_hostname }}"
+        login_port: 27030
+        ssl: true
+        auth_mechanism: SCRAM-SHA-256
+        database: testdb1
+        name: user1
+        password: "{{ user1_password }}"
+        roles:
+          - readWrite
+
+    - name: Create Databases and Users
+      community.mongodb.mongodb_user:
+        login_user: admin
+        login_password: "{{ admin_password }}"
+        login_host: "{{ inventory_hostname }}"
+        login_port: 27030
+        ssl: true
+        auth_mechanism: SCRAM-SHA-256
+        database: testdb2
+        name: user2
+        password: "{{ user2_password }}"
+        roles:
+          - readWrite
+
+    - name: Create Databases and Users
+      community.mongodb.mongodb_user:
+        login_user: admin
+        login_password: "{{ admin_password }}"
+        login_host: "{{ inventory_hostname }}"
+        login_port: 27030
+        ssl: true
+        auth_mechanism: SCRAM-SHA-256
+        database: testdb3
+        name: user3
+        password: "{{ user3_password }}"
+        roles:
+          - readWrite
+```
+
+2. **Run the playbook**: Execute the playbook using the `ansible-playbook` command:
+
+```sh
+ansible-playbook -i inventory.ini mongodb_setup.yml
+```
+
+Replace placeholders:
+
+- `your_mongodb_servers`: Replace with the name of the Ansible host group that includes your MongoDB servers.
+- `your_admin_password`: Set a strong password for the admin user.
+- `user1_password`, `user2_password`, `user3_password`: Set passwords for the respective users.
+
+This playbook will configure the MongoDB replica set, create an admin user, and set up three databases with corresponding users having read-write permissions. TLS and authentication are enabled for secure communication.
+
+Adjust the playbook according to your specific environment and requirements. Also, ensure that you have Ansible and the `community.mongodb` collection properly installed to use these tasks.
