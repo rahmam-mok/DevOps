@@ -1,0 +1,66 @@
+Configuring JBoss EAP (Enterprise Application Platform) on RedHat Enterprise Server to use Kerberos authentication for a Spring web application involves several steps. Kerberos is a complex authentication protocol, so the process can be intricate. Here's a general outline of the steps you'll need to follow:
+
+1. **Prerequisites**:
+
+   - Make sure you have a basic understanding of Kerberos authentication.
+   - Ensure that your Spring web application is ready and functional on JBoss EAP.
+   - You'll need to have a Kerberos Key Distribution Center (KDC) set up and properly configured in your network environment.
+
+2. **Configure JBoss EAP**:
+
+   - Open the `standalone.xml` or `domain.xml` configuration file, typically located in the `standalone/configuration` or `domain/configuration` directory of your JBoss EAP installation.
+
+   - Inside the configuration file, locate the `<security-realms>` section and configure a new Kerberos security realm. You'll need to specify the KDC, realm, keytab file, and other Kerberos settings. Here's a basic example:
+
+     ```xml
+     <security-realms>
+         <security-realm name="KerberosRealm">
+             <authentication>
+                 <kerberos>
+                     <keytab path="/path/to/keytab/file.keytab"/>
+                     <principal>HTTP/your-server-hostname@YOUR-REALM.COM</principal>
+                     <debug>true</debug>
+                 </kerberos>
+             </authentication>
+         </security-realm>
+     </security-realms>
+     ```
+
+   - Make sure to replace `/path/to/keytab/file.keytab` with the actual path to your keytab file and adjust the principal accordingly.
+
+3. **Update Application Deployment Descriptor**:
+
+   - For your Spring web application, update the deployment descriptor (web.xml) to enable SPNEGO (Simple and Protected GSSAPI Negotiation Mechanism) authentication.
+
+     ```xml
+     <login-config>
+         <auth-method>SPNEGO</auth-method>
+         <realm-name>KerberosRealm</realm-name>
+     </login-config>
+     ```
+
+4. **Configure Web Application Security Constraints**:
+
+   - In your web application's deployment descriptor, you can specify security constraints that require certain roles for specific resources. You can use roles provided by Kerberos authentication for authorization.
+
+     ```xml
+     <security-constraint>
+         <web-resource-collection>
+             <web-resource-name>Protected Resources</web-resource-name>
+             <url-pattern>/protected/*</url-pattern>
+         </web-resource-collection>
+         <auth-constraint>
+             <role-name>YOUR_KERBEROS_ROLE</role-name>
+         </auth-constraint>
+     </security-constraint>
+     ```
+
+5. **Testing and Troubleshooting**:
+
+   - Deploy your updated Spring web application to JBoss EAP.
+
+   - Access the protected resources in your web application. The browser should automatically perform the Kerberos negotiation, and you should be authenticated if your Kerberos credentials are valid.
+
+   - Monitor the JBoss EAP logs for any authentication or Kerberos-related issues. Enable debugging if needed.
+
+Remember that this is a high-level overview, and the exact steps might vary based on your environment and requirements. Additionally, Kerberos authentication involves interactions between multiple components, so thorough testing and troubleshooting are crucial. It's recommended to consult the JBoss EAP documentation, Spring Security documentation, and relevant Kerberos resources for more detailed and up-to-date guidance.
