@@ -1,0 +1,41 @@
+ here's an example Ansible playbook to install Apache Tomcat on a Windows Server 2022 machine using Ansible:
+
+```yaml
+---
+- name: Install Apache Tomcat on Windows
+  hosts: windows_servers
+  become: yes
+  tasks:
+    - name: Download Tomcat Installer
+      win_get_url:
+        url: "https://downloads.apache.org/tomcat/tomcat-9/v9.0.54/bin/apache-tomcat-9.0.54-windows-x64.zip"
+        dest: "C:\\temp\\tomcat.zip"
+
+    - name: Unzip Tomcat Archive
+      win_unzip:
+        src: "C:\\temp\\tomcat.zip"
+        dest: "C:\\Tomcat"
+        creates_path: yes
+
+    - name: Set Tomcat Environment Variables
+      win_environment:
+        name: CATALINA_HOME
+        value: "C:\\Tomcat\\apache-tomcat-9.0.54"
+        state: present
+
+    - name: Add Tomcat Bin Directory to PATH
+      win_environment:
+        name: PATH
+        value: "{{ ansible_env.PATH }};C:\\Tomcat\\apache-tomcat-9.0.54\\bin"
+        state: present
+        notify: Update Environment
+
+    - name: Start Tomcat Service
+      win_command: "C:\\Tomcat\\apache-tomcat-9.0.54\\bin\\startup.bat"
+```
+
+Make sure to replace `windows_servers` with the appropriate host or group name in your Ansible inventory. Also, modify the Tomcat version and URLs in the `win_get_url` task to match your requirements.
+
+The above playbook downloads the Tomcat zip archive, extracts it to `C:\Tomcat`, sets the necessary environment variables (`CATALINA_HOME` and `PATH`), and then starts the Tomcat service using `startup.bat`.
+
+Keep in mind that this is a simplified playbook and may need adjustments based on your environment and requirements. Additionally, ensure you have proper permissions to execute Ansible tasks on the Windows Server machine.
