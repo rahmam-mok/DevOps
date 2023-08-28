@@ -1,0 +1,27 @@
+---
+- name: Install Apache Tomcat on RHEL 8
+  hosts: your_target_hosts
+  become: yes
+  tasks:
+    - name: Install Java
+      dnf:
+        name: java-1.8.0-openjdk
+        state: present
+
+    - name: Download Tomcat Binary
+      get_url:
+        url: http://mirror.apache-kr.org/tomcat/tomcat-8/v8.5.73/bin/apache-tomcat-8.5.73.tar.gz
+        dest: /tmp/apache-tomcat-8.5.73.tar.gz
+
+    - name: Extract Tomcat
+      unarchive:
+        src: /tmp/apache-tomcat-8.5.73.tar.gz
+        dest: /opt
+        remote_src: yes
+        creates: /opt/apache-tomcat-8.5.73
+
+    - name: Start Tomcat Service
+      systemd:
+        name: tomcat
+        enabled: yes
+        state: started
