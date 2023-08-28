@@ -31,3 +31,36 @@ here's a basic example of an Ansible playbook that could be used to install resi
 Remember to replace `/path/to/resin/installer.exe` with the actual path to the Resin installer executable on your system. Also, replace `windows_servers` with the group or hostname of your Windows Server target.
 
 Keep in mind that this example is a simplified playbook and doesn't handle all potential edge cases. You might need to adjust it based on your specific environment and requirements. Also, ensure that you have proper permissions and network connectivity to execute Ansible tasks on the Windows Server machines.
+
+
+---
+- name: Install Resin Server on Windows
+  hosts: windows_servers
+  tasks:
+    - name: Copy Resin Installer
+      win_copy:
+        src: /path/to/resin/installer.exe
+        dest: C:\temp\resin_installer.exe
+
+    - name: Create Installation Directory
+      win_file:
+        path: "C:\custom\installation\path"
+        state: directory
+
+    - name: Run Resin Installer
+      win_shell: |
+        Start-Process -FilePath "C:\temp\resin_installer.exe" -ArgumentList "/silent /installdir=C:\custom\installation\path"
+      register: install_result
+      until: install_result.rc == 0
+      retries: 3
+      delay: 5
+
+    - name: Check Installation Status
+      win_stat:
+        path: "C:\custom\installation\path\resin"
+      register: resin_folder
+
+    - name: Ensure Resin is Installed in Custom Directory
+      fail:
+        msg: "Resin installation failed."
+      when: resin_folder.exists == False
