@@ -1,0 +1,55 @@
+---
+- name: Install MongoDB 4.4 and BI Connector on RHEL 8
+  hosts: your_server_hostname
+  become: yes
+
+  tasks:
+    - name: Add MongoDB repository
+      yum_repository:
+        name: mongodb-org-4.4
+        description: MongoDB Repository
+        baseurl: https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/4.4/x86_64/
+        gpgcheck: yes
+        enabled: yes
+        gpgkey: https://www.mongodb.org/static/pgp/server-4.4.asc
+
+    - name: Install MongoDB packages
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - mongodb-org
+        - mongodb-org-server
+        - mongodb-org-shell
+        - mongodb-org-mongos
+        - mongodb-org-tools
+
+    - name: Start and enable MongoDB service
+      systemd:
+        name: mongod
+        state: started
+        enabled: yes
+
+    - name: Download MongoDB BI Connector
+      get_url:
+        url: https://info-mongodb-com.s3.amazonaws.com/mongodb-bi/v2/mongodb-bi-linux-x86_64-{{ bi_connector_version }}.tar.gz
+        dest: /tmp/mongodb-bi.tar.gz
+      vars:
+        bi_connector_version: "2.13.0"  # Change this to the latest version
+
+    - name: Extract MongoDB BI Connector
+      ansible.builtin.unarchive:
+        src: /tmp/mongodb-bi.tar.gz
+        dest: /opt/
+        remote_src: yes
+        creates: /opt/mongodb-bi
+
+    - name: Set up MongoDB BI Connector environment variables
+      ansible.builtin.lineinfile:
+        path: /etc/profile.d/mongodb_bi.sh
+        line: 'export PATH=$PATH:/opt/mongodb-bi/bin'
+        state: present
+        create: yes
+
+    - name: Reload shell environment
+      ansible.builtin.shell: source /etc/profile
