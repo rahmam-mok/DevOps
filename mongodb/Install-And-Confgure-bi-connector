@@ -1,0 +1,60 @@
+ here's an Ansible playbook that installs MongoDB Connector for BI (mongosqld) as a service on Red Hat Enterprise Linux 8, using a non-default port specified in the `mongosqld.conf` configuration file:
+
+```yaml
+---
+- name: Install MongoDB Connector for BI (mongosqld) on RHEL 8 with non-default port
+  hosts: your_server_hostname
+  become: yes
+
+  tasks:
+    - name: Download MongoDB Connector for BI (mongosqld)
+      get_url:
+        url: https://info-mongodb-com.s3.amazonaws.com/mongodb-bi/v2/mongo-bi-linux-x86_64-{{ mongosqld_version }}.tar.gz
+        dest: /tmp/mongo-bi.tar.gz
+      vars:
+        mongosqld_version: "2.13.0"  # Change this to the latest version
+
+    - name: Extract MongoDB Connector for BI (mongosqld)
+      ansible.builtin.unarchive:
+        src: /tmp/mongo-bi.tar.gz
+        dest: /opt/
+        remote_src: yes
+        creates: /opt/mongo-bi
+
+    - name: Configure mongosqld service
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=MongoDB Connector for BI (mongosqld)
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=root
+          ExecStart=/opt/mongo-bi/bin/mongosqld --config /etc/mongosqld.conf
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/mongosqld.service
+
+    - name: Create mongosqld configuration file
+      ansible.builtin.copy:
+        content: |
+          [mongosqld]
+          port = 27018  # Change the port as needed
+        dest: /etc/mongosqld.conf
+
+    - name: Reload systemd services
+      systemd:
+        daemon_reload: yes
+
+    - name: Start and enable mongosqld service
+      systemd:
+        name: mongosqld
+        state: started
+        enabled: yes
+```
+
+Replace `your_server_hostname` with the appropriate target hostname or IP address. Customize the playbook, the service configuration, and the port number as needed for your environment.
+
+Remember to test the playbook in a non-production environment before deploying to production servers.
