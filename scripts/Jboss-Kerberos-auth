@@ -1,0 +1,49 @@
+Configuring Kerberos authentication with AWS Elastic Load Balancer (ELB) and two JBoss servers involves several steps. This setup assumes that you have a Key Distribution Center (KDC) for Kerberos, like Active Directory, and two JBoss servers behind an AWS ELB. Here's a step-by-step guide:
+
+1. **Prepare Your Environment**:
+   - Ensure you have a functioning KDC, typically Active Directory.
+   - Deploy two JBoss servers and your application.
+   - Make sure you have Kerberos client utilities installed on your JBoss servers.
+
+2. **Create Service Principal Names (SPNs)**:
+   - Create Service Principal Names (SPNs) for your JBoss servers. These SPNs must match the DNS names used to access your application.
+     ```
+     setspn -s HTTP/your-elb-dns-name your-jboss-server1
+     setspn -s HTTP/your-elb-dns-name your-jboss-server2
+     ```
+
+3. **Generate Keytab Files**:
+   - Generate keytab files for each JBoss server using the `ktpass` or `ktutil` command. These keytab files will be used for server authentication.
+     ```
+     ktpass -princ HTTP/your-elb-dns-name@YOUR-REALM -mapuser your-jboss-server1 -pass your-password -crypto RC4-HMAC-NT -ptype KRB5_NT_PRINCIPAL -out jboss1.keytab
+     ktpass -princ HTTP/your-elb-dns-name@YOUR-REALM -mapuser your-jboss-server2 -pass your-password -crypto RC4-HMAC-NT -ptype KRB5_NT_PRINCIPAL -out jboss2.keytab
+     ```
+
+4. **Copy Keytab Files**:
+   - Copy the keytab files (`jboss1.keytab` and `jboss2.keytab`) to your JBoss servers and place them in a secure directory.
+
+5. **Configure JBoss for Kerberos**:
+   - Edit your JBoss server configuration (`standalone.xml`) to enable Kerberos authentication. Specify the path to the keytab files and the realm.
+
+6. **Configure ELB for TCP/UDP Pass-through**:
+   - In the AWS Management Console, configure your ELB listener to use TCP/UDP and direct traffic to the backend JBoss instances.
+
+7. **Associate ELB with JBoss Instances**:
+   - Ensure that your ELB is correctly associated with both JBoss instances.
+
+8. **DNS Configuration**:
+   - Ensure that your domain's DNS records point to the ELB's DNS name.
+
+9. **Test the Configuration**:
+   - Use a client (e.g., a web browser) to access your application through the ELB's DNS name. Verify that Kerberos authentication works as expected.
+
+10. **Logging and Monitoring**:
+    - Implement proper logging and monitoring to track authentication and authorization events for troubleshooting and security purposes.
+
+11. **Security Best Practices**:
+    - Follow AWS and Kerberos security best practices, such as securing your keytab files, configuring appropriate IAM roles, and regularly rotating credentials.
+
+12. **High Availability Considerations**:
+    - Ensure that your architecture is designed for high availability, considering failover mechanisms for both JBoss servers and the KDC.
+
+Remember to adapt these steps to your specific environment and requirements. Testing and thorough documentation are crucial for a successful Kerberos authentication setup with ELB and multiple JBoss servers.
