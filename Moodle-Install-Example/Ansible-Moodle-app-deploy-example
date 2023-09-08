@@ -1,0 +1,164 @@
+To install PHP, deploy the Moodle app with an AWS RDS MySQL database, and configure Apache HTTPD for SSL with a certificate for a web application on RHEL 8 using Ansible, you'll need a more comprehensive playbook. This playbook will also require additional configuration files for the Moodle app and SSL certificate. Here's a high-level playbook structure:
+
+```yaml
+---
+- name: Install PHP, Deploy Moodle, and Configure HTTPD for SSL on RHEL 8
+  hosts: your_target_server
+  become: yes
+  vars:
+    db_host: your_rds_endpoint
+    db_user: your_db_user
+    db_password: your_db_password
+    moodle_url: https://your-moodle-url.com
+    ssl_cert_path: /path/to/ssl/certificate.crt
+    ssl_key_path: /path/to/ssl/privatekey.key
+  tasks:
+    - name: Update YUM cache
+      yum:
+        name: '*'
+        state: latest
+
+    - name: Install EPEL repository
+      yum:
+        name: epel-release
+        state: present
+
+    # Install other dependencies like httpd, PHP, unzip, etc.
+
+    # Configure and secure MariaDB/RDS connection
+    - name: Secure MariaDB connection
+      template:
+        src: my.cnf.j2
+        dest: /etc/my.cnf
+      notify:
+        - Restart MariaDB
+
+    - name: Create Moodle database and user
+      mysql_db:
+        name: moodle
+        state: present
+      become_user: root
+
+    - name: Create Moodle database user
+      mysql_user:
+        name: moodleuser
+        password: "{{ db_password }}"
+        priv: "moodle.*:ALL"
+        host: "{{ db_host }}"
+        state: present
+      become_user: root
+
+    - name: Download and deploy Moodle
+      get_url:
+        url: "https://download.moodle.org/download.php/stable310/moodle-latest-310.tgz"
+        dest: "/tmp/moodle-latest.tgz"
+      register: download_result
+
+    - name: Extract Moodle
+      unarchive:
+        src: "/tmp/moodle-latest.tgz"
+        dest: "/var/www/html/"
+      when: download_result.changed
+
+    - name: Set permissions for Moodle
+      file:
+        path: "/var/www/html/moodle"
+        owner: apache
+        group: apache
+        recurse: yes
+      become_user: root
+
+    # Install and configure mod_ssl for HTTPS
+    - name: Install mod_ssl
+      yum:
+        name: mod_ssl
+        state: present
+
+    - name: Copy SSL certificate and private key
+      copy:
+        src: "{{ ssl_cert_path }}"
+        dest: /etc/pki/tls/certs/your_cert.crt
+      notify:
+        - Restart Apache
+
+    - name: Copy SSL key
+      copy:
+        src: "{{ ssl_key_path }}"
+        dest: /etc/pki/tls/private/your_private_key.key
+      notify:
+        - Restart Apache
+
+    - name: Configure Apache for SSL
+      template:
+        src: ssl.conf.j2
+        dest: /etc/httpd/conf.d/ssl.conf
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Restart MariaDB
+      service:
+        name: mariadb
+        state: restarted
+
+    - name: Restart Apache
+      service:
+        name: httpd
+        state: restarted
+```
+
+In this playbook:
+
+- Replace `your_target_server` with the IP address or hostname of your RHEL 8 server.
+- Set the variables like `db_host`, `db_user`, `db_password`, `moodle_url`, `ssl_cert_path`, and `ssl_key_path` to your specific values.
+- You'll need to create custom configuration files (e.g., `my.cnf.j2`, `ssl.conf.j2`) for MariaDB/RDS and SSL certificate settings, respectively, and place them in the same directory as your playbook.
+
+Make sure to replace the download URL for Moodle with the desired version, and customize any other settings to match your specific requirements. Save this playbook to a file (e.g., `install_moodle_ssl.yml`) and run it using the `ansible-playbook` command on your Ansible control machine.
+
+
+
+
+The `ssl.conf.j2` file is a Jinja2 template that you can use to configure Apache HTTPD for SSL (HTTPS). Below is an example `ssl.conf.j2` file with some basic SSL settings. You may need to customize it further based on your specific SSL certificate and server configuration:
+
+```apache
+<IfModule mod_ssl.c>
+    <VirtualHost *:443>
+        ServerAdmin webmaster@your-domain.com
+        ServerName your-moodle-url.com
+        DocumentRoot /var/www/html/moodle
+
+        SSLEngine on
+        SSLCertificateFile /etc/pki/tls/certs/your_cert.crt
+        SSLCertificateKeyFile /etc/pki/tls/private/your_private_key.key
+
+        # Optional: SSLCertificateChainFile for intermediate certificates
+
+        <FilesMatch "\.(cgi|shtml|phtml|php)$">
+            SSLOptions +StdEnvVars
+        </FilesMatch>
+
+        <Directory /var/www/html/moodle>
+            Options FollowSymLinks
+            AllowOverride All
+            Order allow,deny
+            Allow from all
+        </Directory>
+
+        ErrorLog logs/ssl_error_log
+        TransferLog logs/ssl_access_log
+        LogLevel warn
+
+        # Additional SSL configurations can go here
+    </VirtualHost>
+</IfModule>
+```
+
+In this template:
+
+- Replace `ServerAdmin`, `ServerName`, and `DocumentRoot` with your server's details and Moodle directory path.
+- Set the `SSLCertificateFile` and `SSLCertificateKeyFile` to the paths of your SSL certificate and private key files, respectively.
+- You may need to add an `SSLCertificateChainFile` directive if you have intermediate certificates.
+- Customize the `<Directory>` section to match your Moodle application's configuration if necessary.
+- You can also add additional SSL configurations based on your requirements.
+
+Remember to place this `ssl.conf.j2` file in the same directory as your Ansible playbook, and the playbook will use this template to configure SSL for Apache HTTPD when you run it.
