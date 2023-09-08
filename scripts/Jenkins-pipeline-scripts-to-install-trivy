@@ -1,0 +1,32 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Configure Trivy Repository') {
+            steps {
+                script {
+                    // Add the Trivy repository using yum
+                    sh 'sudo yum-config-manager --add-repo https://aquasecurity.github.io/trivy-repo/rpm/trivy.repo'
+                }
+            }
+        }
+        
+        stage('Install Trivy') {
+            steps {
+                script {
+                    // Install Trivy using yum
+                    sh 'sudo yum install -y trivy'
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Trivy installed successfully!'
+        }
+        failure {
+            error 'Trivy installation failed!'
+        }
+    }
+}
