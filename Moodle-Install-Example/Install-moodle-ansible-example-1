@@ -1,0 +1,116 @@
+To install PHP, Moodle, and configure Apache HTTPD for SSL on RHEL 8 using Ansible, you can use the following playbook. Make sure you have Ansible set up and SSH access configured to your RHEL 8 server.
+
+```yaml
+---
+- name: Install PHP, Moodle, and Configure HTTPD for SSL on RHEL 8
+  hosts: your_target_server
+  become: yes
+  tasks:
+    - name: Update YUM cache
+      yum:
+        name: '*'
+        state: latest
+
+    - name: Install EPEL repository
+      yum:
+        name: epel-release
+        state: present
+
+    - name: Install required packages
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - httpd
+        - php
+        - php-mysqlnd
+        - php-gd
+        - php-xml
+        - php-intl
+        - php-json
+        - mariadb-server
+        - mariadb
+        - mariadb-client
+        - unzip
+        - wget
+        - git
+
+    - name: Start and enable Apache
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Start and enable MariaDB
+      service:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    - name: Secure MariaDB installation
+      command: mysql_secure_installation
+      args:
+        creates: "/root/.my.cnf"
+      when: "'/root/.my.cnf' not in (ansible_facts.home_directory | string)+'/.'+ansible_facts.user_name"
+
+    - name: Create Moodle database and user
+      mysql_db:
+        name: moodle
+        state: present
+      become_user: root
+
+    - name: Create Moodle database user
+      mysql_user:
+        name: moodleuser
+        password: your_password_here
+        priv: "moodle.*:ALL"
+        host: localhost
+        state: present
+      become_user: root
+
+    - name: Download Moodle
+      get_url:
+        url: "https://download.moodle.org/download.php/stable310/moodle-latest-310.tgz"
+        dest: "/tmp/moodle-latest.tgz"
+      register: download_result
+
+    - name: Extract Moodle
+      unarchive:
+        src: "/tmp/moodle-latest.tgz"
+        dest: "/var/www/html/"
+      when: download_result.changed
+
+    - name: Set permissions for Moodle
+      file:
+        path: "/var/www/html/moodle"
+        owner: apache
+        group: apache
+        recurse: yes
+      become_user: root
+
+    - name: Install mod_ssl for HTTPS
+      yum:
+        name: mod_ssl
+        state: present
+
+    - name: Configure Apache for SSL
+      template:
+        src: ssl.conf.j2
+        dest: /etc/httpd/conf.d/ssl.conf
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      service:
+        name: httpd
+        state: restarted
+```
+
+In this playbook:
+
+1. Replace `your_target_server` with the IP address or hostname of your RHEL 8 server.
+2. Set the appropriate MySQL/MariaDB password in the `password` field.
+3. This playbook also configures SSL for Apache HTTPD. You'll need to create an SSL certificate file (`ssl.conf.j2`) and place it in the same directory as your playbook. Make sure to adjust the SSL configuration file to suit your specific needs.
+
+Save this playbook to a file (e.g., `install_moodle_ssl.yml`) and run it using the `ansible-playbook` command on your Ansible control machine.
