@@ -1,0 +1,105 @@
+To install MongoDB 4.4 on an RHEL 8.8 server with SELinux policy enabled, configure MongoDB to use non-default ports, mount log files to `/log/mongodb`, data files to `/data/db`, store the configuration in `/etc/mongod.conf`, run MongoDB as the `mongod` user, and ensure SELinux doesn't block the MongoDB service, you can create an Ansible playbook with specific tasks and roles. Here's an example:
+
+1. Create an Ansible playbook (e.g., `install_mongodb.yml`) to orchestrate the tasks:
+
+```yaml
+---
+- name: Install and configure MongoDB 4.4 on RHEL 8.8
+  hosts: mongodb_server
+  become: yes
+
+  roles:
+    - mongodb_installation
+    - mongodb_configuration
+    - selinux_configuration
+
+  tasks:
+    - name: Start MongoDB service with custom config file
+      systemd:
+        name: mongod
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      tags: mongodb_service
+```
+
+2. Create an Ansible role for MongoDB installation (e.g., `mongodb_installation/tasks/main.yml`):
+
+```yaml
+---
+- name: Install MongoDB 4.4 repository
+  yum_repository:
+    name: mongodb-org-4.4
+    description: MongoDB Repository
+    baseurl: https://repo.mongodb.org/yum/redhat/8/mongodb-org/4.4/x86_64/
+    gpgcheck: yes
+    gpgkey: https://www.mongodb.org/static/pgp/server-4.4.asc
+    state: present
+
+- name: Install MongoDB 4.4 packages
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - mongodb-org-server
+    - mongodb-org-shell
+    - mongodb-org-tools
+  tags: mongodb_install
+```
+
+3. Create an Ansible role for MongoDB configuration (e.g., `mongodb_configuration/tasks/main.yml`):
+
+```yaml
+---
+- name: Create MongoDB directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: mongod
+    group: mongod
+    mode: 0755
+  with_items:
+    - /log/mongodb
+    - /data/db
+  tags: mongodb_configuration
+
+- name: Copy MongoDB configuration file
+  copy:
+    src: mongodb.conf
+    dest: /etc/mongod.conf
+    owner: root
+    group: root
+    mode: 0644
+  tags: mongodb_configuration
+
+- name: Set MongoDB to listen on a non-default port (e.g., 27017)
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^port'
+    line: 'port = 27017'
+  tags: mongodb_configuration
+```
+
+4. Create an Ansible role for SELinux configuration (e.g., `selinux_configuration/tasks/main.yml`):
+
+```yaml
+---
+- name: Set SELinux boolean for MongoDB to allow network connections
+  selinux:
+    boolean: "{{ item }}"
+    state: yes
+  with_items:
+    - mongod_can_network_connect
+    - mongod_use_nfs
+  tags: selinux_configuration
+```
+
+5. Run the playbook using the `ansible-playbook` command, specifying your inventory file:
+
+```bash
+ansible-playbook -i inventory.ini install_mongodb.yml
+```
+
+Ensure that the `inventory.ini` file contains the necessary server information. Adjust package names, paths, and port numbers as needed based on your specific MongoDB setup.
+
+This playbook installs MongoDB 4.4, configures it with the specified settings, and starts the MongoDB service. It also sets SELinux booleans to allow MongoDB to establish network connections as needed.
