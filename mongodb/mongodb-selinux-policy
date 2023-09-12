@@ -1,0 +1,69 @@
+To resolve MongoDB service blockage by SELinux using Ansible, you can create Ansible playbooks and roles to manage SELinux policies and MongoDB configurations. Here's a simplified example of Ansible tasks that you can use as a starting point:
+
+1. Create an Ansible playbook (e.g., `mongodb_selinux.yml`) to orchestrate the tasks.
+
+```yaml
+---
+- name: MongoDB SELinux Configuration
+  hosts: mongodb_server
+  become: yes
+
+  tasks:
+    - name: Ensure SELinux is in permissive mode (temporary)
+      selinux:
+        policy: targeted
+        state: permissive
+      ignore_errors: yes
+
+    - name: Ensure SELinux allows MongoDB to bind to network ports
+      selinux_permissive:
+        seuser: system_u
+        serole: object_r
+        setype: mongod_port_t
+        selevel: s0
+        allow: 1
+      tags: mongodb_selinux
+
+    - name: Ensure SELinux allows MongoDB to read/write data
+      selinux_permissive:
+        seuser: system_u
+        serole: object_r
+        setype: mongod_db_t
+        selevel: s0
+        allow: 1
+      tags: mongodb_selinux
+
+    # Add other MongoDB-specific SELinux configurations if needed
+
+    - name: Restart MongoDB service
+      service:
+        name: mongod
+        state: restarted
+      tags: mongodb_service
+
+    - name: Ensure SELinux is enforcing again (optional)
+      selinux:
+        policy: targeted
+        state: enforcing
+      ignore_errors: yes
+
+- name: Ensure SELinux is enforcing (optional)
+  hosts: mongodb_server
+  become: yes
+  tasks:
+    - name: Ensure SELinux is enforcing
+      selinux:
+        policy: targeted
+        state: enforcing
+```
+
+In this playbook:
+
+- We set SELinux to permissive mode temporarily to identify and allow the necessary SELinux rules for MongoDB.
+- We use the `selinux_permissive` Ansible module to add permissive rules for MongoDB, allowing it to bind to network ports (`mongod_port_t`) and read/write data (`mongod_db_t`).
+- We restart the MongoDB service to apply the SELinux policy changes.
+- Optionally, we ensure SELinux is set back to enforcing mode after making the necessary policy changes.
+
+Remember to customize the playbook based on your specific MongoDB setup and SELinux requirements. You can run this playbook on your MongoDB server by specifying the inventory and other necessary configuration files.
+
+Additionally, please exercise caution when modifying SELinux policies, as they impact system security. Ensure you understand the implications of the changes you make.
