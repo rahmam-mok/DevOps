@@ -1,0 +1,93 @@
+To resolve MongoDB service blockage by SELinux on RHEL 8 using Ansible, you can create a playbook with roles to manage SELinux policies and MongoDB configurations. Below is a simplified example of Ansible tasks to address this issue:
+
+1. Create an Ansible playbook (e.g., `mongodb_selinux.yml`) to orchestrate the tasks.
+
+```yaml
+---
+- name: MongoDB SELinux Configuration
+  hosts: mongodb_server
+  become: yes
+
+  roles:
+    - selinux_configuration
+    - mongodb_configuration
+
+  tasks:
+    - name: Restart MongoDB service
+      service:
+        name: mongod
+        state: restarted
+      tags: mongodb_service
+```
+
+2. Create an Ansible role for SELinux configuration (e.g., `selinux_configuration/tasks/main.yml`).
+
+```yaml
+---
+- name: Ensure SELinux is in permissive mode (temporary)
+  selinux:
+    policy: targeted
+    state: permissive
+  ignore_errors: yes
+
+- name: Allow MongoDB to bind to network ports
+  selinux_permissive:
+    seuser: system_u
+    serole: object_r
+    setype: mongod_port_t
+    selevel: s0
+    allow: 1
+  tags: mongodb_selinux
+
+- name: Allow MongoDB to read/write data
+  selinux_permissive:
+    seuser: system_u
+    serole: object_r
+    setype: mongod_db_t
+    selevel: s0
+    allow: 1
+  tags: mongodb_selinux
+
+# Add other MongoDB-specific SELinux configurations if needed
+
+- name: Ensure SELinux is enforcing again (optional)
+  selinux:
+    policy: targeted
+    state: enforcing
+  ignore_errors: yes
+```
+
+3. Create an Ansible role for MongoDB configuration (e.g., `mongodb_configuration/tasks/main.yml`).
+
+```yaml
+---
+- name: Install MongoDB packages (adjust package names as needed)
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - mongodb-org-server
+    - mongodb-org-shell
+  tags: mongodb_install
+
+- name: Start and enable MongoDB service
+  service:
+    name: mongod
+    state: started
+    enabled: yes
+  tags: mongodb_service
+```
+
+In this setup:
+
+- We have two roles: `selinux_configuration` for SELinux configuration and `mongodb_configuration` for MongoDB installation and service management.
+- The SELinux role sets SELinux to permissive mode, allows MongoDB to bind to network ports, and read/write data by adding permissive rules. You can add more SELinux configurations as needed.
+- The MongoDB role installs MongoDB packages and starts the MongoDB service.
+
+To execute this playbook on your RHEL 8 server, you need to have Ansible installed, create an inventory file with your server's information, and run the playbook using the `ansible-playbook` command:
+
+```bash
+ansible-playbook -i inventory.ini mongodb_selinux.yml
+```
+
+Make sure to customize the playbook and roles based on your specific MongoDB setup and SELinux requirements.
