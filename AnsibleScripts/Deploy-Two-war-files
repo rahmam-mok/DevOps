@@ -1,0 +1,70 @@
+To dynamically deploy two different WAR files generated from a Jenkins build, published in Nexus, deploy them on a Windows server inside a Resin server, and restart the Resin service using Ansible, you can create an Ansible playbook like the following:
+
+```yaml
+---
+- name: Deploy WAR files from Nexus to Windows server in Resin and restart Resin
+  hosts: windows_server
+  tasks:
+    - name: Get first WAR artifact URL from Nexus
+      uri:
+        url: "http://nexus.example.com/service/rest/v1/search/assets"
+        method: POST
+        body: '{"repository":"your_repository_name","m":"1","n":"first-war-file","v":"latest"}'
+        headers:
+          Content-Type: "application/json"
+          Authorization: "Basic base64_encoded_username_password"  # Replace with your Nexus authentication
+      register: first_war_artifact
+
+    - name: Download first WAR file from Nexus
+      get_url:
+        url: "{{ first_war_artifact.json.assets[0].downloadUrl }}"
+        dest: C:\path\to\local\destination\first-war-file.war  # Local destination on the Ansible control machine
+
+    - name: Get second WAR artifact URL from Nexus
+      uri:
+        url: "http://nexus.example.com/service/rest/v1/search/assets"
+        method: POST
+        body: '{"repository":"your_repository_name","m":"1","n":"second-war-file","v":"latest"}'
+        headers:
+          Content-Type: "application/json"
+          Authorization: "Basic base64_encoded_username_password"  # Replace with your Nexus authentication
+      register: second_war_artifact
+
+    - name: Download second WAR file from Nexus
+      get_url:
+        url: "{{ second_war_artifact.json.assets[0].downloadUrl }}"
+        dest: C:\path\to\local\destination\second-war-file.war  # Local destination on the Ansible control machine
+
+    - name: Copy first WAR file to Windows server
+      win_copy:
+        src: C:\path\to\local\destination\first-war-file.war
+        dest: C:\path\to\remote\destination\first-war-file.war
+
+    - name: Copy second WAR file to Windows server
+      win_copy:
+        src: C:\path\to\local\destination\second-war-file.war
+        dest: C:\path\to\remote\destination\second-war-file.war
+
+    - name: Deploy first WAR file in Resin
+      win_command: 'C:\path\to\resin\bin\resin.bat deploy C:\path\to\remote\destination\first-war-file.war'
+
+    - name: Deploy second WAR file in Resin
+      win_command: 'C:\path\to\resin\bin\resin.bat deploy C:\path\to\remote\destination\second-war-file.war'
+
+    - name: Restart Resin Service
+      win_service:
+        name: resin-service-name  # Replace with the actual Resin service name on Windows
+        state: restarted
+```
+
+In this playbook:
+
+1. Replace `windows_server` with the actual name or IP address of your Windows server in your Ansible inventory.
+2. Replace `http://nexus.example.com` with the URL of your Nexus repository and configure the necessary authentication details.
+3. Update `your_repository_name` with the name of your Nexus repository.
+4. Replace `"first-war-file"` and `"second-war-file"` with the names of your artifacts in Nexus.
+5. Modify the paths for the local and remote destinations to suit your environment.
+6. Adjust the `win_command` tasks to specify the correct path to the `resin.bat` script and the corresponding WAR file for each deployment.
+7. Replace `resin-service-name` with the actual name of your Resin service on Windows.
+
+Make sure that Ansible is properly configured to communicate with your Windows server, and that Resin is installed and configured on the Windows server with the appropriate deployment directories. Also, ensure that your Jenkins job publishes the WAR files to Nexus with the expected naming conventions.
