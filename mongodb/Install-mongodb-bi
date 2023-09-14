@@ -1,0 +1,90 @@
+To install the MongoDB BI Connector as a service on Amazon Linux, you can follow these steps:
+
+1. **SSH into your Amazon Linux Instance:** Log in to your Amazon Linux instance using SSH. You'll need administrative privileges to install and configure services.
+
+2. **Download the MongoDB BI Connector:**
+   You can download the MongoDB BI Connector from the official MongoDB website. Make sure to choose the appropriate version for your system.
+
+   ```bash
+   wget https://info-mongodb-com.s3.amazonaws.com/mongodb-bi/v2/mongodb-bi-linux-x86_64-v2.x.y.tgz
+   ```
+
+   Replace `v2.x.y` with the actual version number.
+
+3. **Extract the BI Connector:**
+   Unpack the downloaded tarball:
+
+   ```bash
+   tar -zxvf mongodb-bi-linux-x86_64-v2.x.y.tgz
+   ```
+
+4. **Move the Connector to a Permanent Location:**
+   You may want to move the extracted files to a more suitable location, like `/opt`.
+
+   ```bash
+   sudo mv mongodb-bi-linux-x86_64-v2.x.y /opt/mongodb-bi-connector
+   ```
+
+5. **Create a Configuration File:**
+   Create a configuration file for the MongoDB BI Connector. You can use a text editor to create and edit the configuration file.
+
+   ```bash
+   sudo nano /opt/mongodb-bi-connector/mongodb-bi-connector.config
+   ```
+
+   Here's an example of a basic configuration file:
+
+   ```yaml
+   ---
+   net:
+      bindIp: 0.0.0.0
+      port: 3307
+   mongodb:
+      mongodb_uri: "mongodb://localhost:27017"
+   ```
+
+   Modify the configuration to suit your specific needs.
+
+6. **Create a Systemd Service Unit:**
+   Create a systemd service unit file to manage the MongoDB BI Connector as a service.
+
+   ```bash
+   sudo nano /etc/systemd/system/mongodb-bi-connector.service
+   ```
+
+   Add the following content to the service unit file:
+
+   ```
+   [Unit]
+   Description=MongoDB BI Connector
+
+   [Service]
+   ExecStart=/opt/mongodb-bi-connector/bin/mongodb-bi-connector -f /opt/mongodb-bi-connector/mongodb-bi-connector.config
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+7. **Reload systemd and Start the Service:**
+   Reload systemd to detect the new service unit and start the MongoDB BI Connector service:
+
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl start mongodb-bi-connector
+   ```
+
+8. **Enable the Service at Boot:**
+   To ensure the MongoDB BI Connector starts automatically when the system reboots, enable it:
+
+   ```bash
+   sudo systemctl enable mongodb-bi-connector
+   ```
+
+9. **Check the Service Status:**
+   Confirm that the MongoDB BI Connector service is running without any issues:
+
+   ```bash
+   sudo systemctl status mongodb-bi-connector
+   ```
+
+That's it! You've successfully installed MongoDB BI Connector as a service on your Amazon Linux instance. You can now connect to it using the specified port (e.g., 3307) and configure it further as needed for your use case.
