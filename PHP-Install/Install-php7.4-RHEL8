@@ -1,0 +1,53 @@
+To install PHP 7.4 on RHEL 8.8 using Ansible, you can create an Ansible playbook. Here's an example playbook that does just that:
+
+```yaml
+---
+- name: Install PHP 7.4 on RHEL 8.8
+  hosts: your_target_server
+  become: yes
+  tasks:
+    - name: Install EPEL repository
+      yum:
+        name: epel-release
+        state: present
+
+    - name: Install PHP 7.4 and required packages
+      yum:
+        name:
+          - php74
+          - php74-php-fpm
+          - php74-php-cli
+          - php74-php-common
+          - php74-php-json
+          - php74-php-mysqlnd
+          - php74-php-opcache
+          - php74-php-mbstring
+          - php74-php-xml
+        state: present
+
+    - name: Set PHP 7.4 as the default PHP version
+      alternatives:
+        name: php
+        path: /usr/bin/php74
+
+    - name: Start and enable PHP-FPM
+      systemd:
+        name: php74-php-fpm
+        enabled: yes
+        state: started
+```
+
+Replace `your_target_server` with the hostname or IP address of the server where you want to install PHP 7.4. This playbook performs the following steps:
+
+1. Installs the EPEL repository, which may be required for additional packages.
+2. Installs PHP 7.4 and necessary PHP packages.
+3. Sets PHP 7.4 as the default PHP version using the `alternatives` module.
+4. Starts and enables the PHP-FPM service.
+
+Save this playbook to a file, for example, `install_php74.yml`, and then run it using the `ansible-playbook` command:
+
+```bash
+ansible-playbook install_php74.yml
+```
+
+Ensure you have Ansible installed and configured properly on your system and that you have the necessary privileges to become the root user or use `sudo` on the target server.
