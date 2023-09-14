@@ -1,0 +1,74 @@
+To install PHP 7.4 with the PECL Redis extension on RHEL 8.8 using Ansible, you can modify the previous playbook to include the Redis extension installation. Here's an updated playbook:
+
+```yaml
+---
+- name: Install PHP 7.4 with PECL Redis on RHEL 8.8
+  hosts: your_target_server
+  become: yes
+  tasks:
+    - name: Install EPEL repository
+      yum:
+        name: epel-release
+        state: present
+
+    - name: Install PHP 7.4 and required packages
+      yum:
+        name:
+          - php74
+          - php74-php-fpm
+          - php74-php-cli
+          - php74-php-common
+          - php74-php-json
+          - php74-php-mysqlnd
+          - php74-php-opcache
+          - php74-php-mbstring
+          - php74-php-xml
+        state: present
+
+    - name: Set PHP 7.4 as the default PHP version
+      alternatives:
+        name: php
+        path: /usr/bin/php74
+
+    - name: Start and enable PHP-FPM
+      systemd:
+        name: php74-php-fpm
+        enabled: yes
+        state: started
+
+    - name: Install PECL Redis extension
+      command: pecl install redis
+      args:
+        creates: /usr/lib64/php/modules/redis.so
+
+    - name: Add Redis extension configuration
+      lineinfile:
+        path: /etc/php.d/40-redis.ini
+        line: "extension=redis.so"
+      notify:
+        - Restart PHP-FPM
+
+  handlers:
+    - name: Restart PHP-FPM
+      systemd:
+        name: php74-php-fpm
+        state: restarted
+```
+
+This playbook extends the previous one to include the installation of the PECL Redis extension. It does the following:
+
+1. Installs the EPEL repository (if not already installed).
+2. Installs PHP 7.4 and the required PHP packages, just like in the previous playbook.
+3. Sets PHP 7.4 as the default PHP version.
+4. Starts and enables PHP-FPM.
+5. Installs the PECL Redis extension using the `pecl install` command.
+6. Adds the configuration for the Redis extension to a PHP configuration file.
+7. Notifies the "Restart PHP-FPM" handler to restart PHP-FPM after adding the extension.
+
+Save this playbook to a file, for example, `install_php74_with_redis.yml`, and then run it using the `ansible-playbook` command:
+
+```bash
+ansible-playbook install_php74_with_redis.yml
+```
+
+Ensure you have Ansible installed and configured properly on your system and that you have the necessary privileges to become the root user or use `sudo` on the target server.
