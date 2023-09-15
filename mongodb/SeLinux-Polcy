@@ -1,0 +1,43 @@
+To label MongoDB on a non-default port correctly using `semanage`, set the SELinux context for `/data/db` and `/log/mongo/mongod.log`, reload the SELinux policy, and restart the `mongod` service, you can create an Ansible playbook like the following:
+
+```yaml
+---
+- name: Label MongoDB non-default port and set SELinux context
+  hosts: your_target_host
+  become: yes  # Use sudo to run commands with elevated privileges
+
+  tasks:
+    - name: Label MongoDB port (e.g., 27017)
+      command: semanage port -a -t mongod_port_t -p tcp 27017
+      # Replace 27017 with your non-default MongoDB port
+      notify: Reload SELinux Policy
+
+    - name: Set SELinux context for /data/db
+      command: chcon -R -t mongod_var_lib_t /data/db
+      notify: Reload SELinux Policy
+
+    - name: Set SELinux context for /log/mongo/mongod.log
+      command: chcon -t mongod_log_t /log/mongo/mongod.log
+      notify: Reload SELinux Policy
+
+  handlers:
+    - name: Reload SELinux Policy
+      command: restorecon -R -v /data/db /log/mongo/mongod.log
+      # Optionally, you can also add tasks to reload the SELinux policy here.
+      # Use the appropriate command for your system.
+
+    - name: Restart mongod service
+      systemd:
+        name: mongod
+        state: restarted
+```
+
+Make sure to replace `your_target_host` with the actual target host where MongoDB is installed and adjust the paths and port as necessary. This playbook performs the following steps:
+
+1. Labels the non-default MongoDB port (e.g., 27017) using `semanage`.
+2. Sets the SELinux context for the `/data/db` directory.
+3. Sets the SELinux context for the `/log/mongo/mongod.log` file.
+4. Reloads the SELinux policy.
+5. Restarts the `mongod` service to apply the changes.
+
+You can run this playbook with Ansible on your target host to achieve the desired configuration.
