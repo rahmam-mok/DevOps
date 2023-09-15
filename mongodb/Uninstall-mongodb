@@ -1,0 +1,41 @@
+Uninstalling MongoDB Enterprise from RHEL 8 using Ansible involves a similar approach to uninstalling the community edition, with the key difference being the package names. Here's how you can uninstall MongoDB Enterprise using Ansible:
+
+1. Create an Ansible playbook file, e.g., `uninstall_mongodb_enterprise.yml`.
+
+2. Define your playbook. Here's an example playbook:
+
+```yaml
+---
+- name: Uninstall MongoDB Enterprise from RHEL 8
+  hosts: your_target_host
+  become: yes
+  tasks:
+    - name: Remove MongoDB Enterprise packages
+      yum:
+        name: "{{ item }}"
+        state: absent
+      with_items:
+        - mongodb-enterprise
+        - mongodb-enterprise-server
+        - mongodb-enterprise-mongos
+        - mongodb-enterprise-shell
+        - mongodb-enterprise-tools
+
+    - name: Remove MongoDB Enterprise data directory
+      file:
+        path: /var/lib/mongodb
+        state: absent
+      ignore_errors: yes
+```
+
+Replace `your_target_host` with the hostname or IP address of the RHEL 8 system you want to uninstall MongoDB Enterprise from.
+
+3. Save the playbook file.
+
+4. Run the playbook using the `ansible-playbook` command:
+
+```bash
+ansible-playbook uninstall_mongodb_enterprise.yml
+```
+
+This playbook uses the `yum` Ansible module to remove MongoDB Enterprise-related packages and the `file` module to remove the MongoDB data directory. Just like with the community edition, make sure you have proper backups of your data before proceeding, as this process will remove both the software and data directories.
