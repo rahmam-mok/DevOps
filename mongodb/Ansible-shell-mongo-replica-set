@@ -1,0 +1,68 @@
+To accomplish the tasks you've outlined in Ansible, including configuring a MongoDB replica set, creating databases, users, and setting specific priorities and votes, you can create a playbook as follows:
+
+```yaml
+---
+- name: Configure MongoDB Replica Set and Users
+  hosts: your_mongodb_servers
+  become: yes  # If you need sudo privileges
+  vars:
+    primary_server: "your_primary_server_hostname"
+    secondary1_server: "hostname_of_secondary1:port1"  # e.g., "mongodb2.example.com:27018"
+    secondary2_server: "hostname_of_secondary2:port2"  # e.g., "mongodb3.example.com:27019"
+    arbiter_server: "hostname_of_arbiter:port3"  # e.g., "mongodb4.example.com:27020"
+    admin_username: "admin"
+    admin_password: "admin_password"
+    cluster_admin_username: "cluster_admin"
+    cluster_admin_password: "cluster_admin_password"
+    user1_username: "user1"
+    user1_password: "user1_password"
+    user2_username: "user2"
+    user2_password: "user2_password"
+    
+  tasks:
+    - name: Add Secondary1 to Replica Set with Priority 1.5 and Vote 1
+      shell: |
+        mongo --host {{ primary_server }} --eval "rs.add({\"_id\": 1, \"host\": '{{ secondary1_server }}', \"priority\": 1.5, \"votes\": 1})"
+        
+    - name: Add Secondary2 to Replica Set with Priority 1 and Vote 1
+      shell: |
+        mongo --host {{ primary_server }} --eval "rs.add({\"_id\": 2, \"host\": '{{ secondary2_server }}', \"priority\": 1, \"votes\": 1})"
+        
+    - name: Add Arbiter to Replica Set with Priority 0 and Vote 0
+      shell: |
+        mongo --host {{ primary_server }} --eval "rs.add({\"_id\": 3, \"host\": '{{ arbiter_server }}', \"arbiterOnly\": true, \"priority\": 0, \"votes\": 0})"
+    
+    - name: Create Test1 Database
+      shell: |
+        mongo --host {{ primary_server }} --eval "use test1"
+    
+    - name: Create Test2 Database
+      shell: |
+        mongo --host {{ primary_server }} --eval "use test2"
+    
+    - name: Create Admin User
+      shell: |
+        mongo --host {{ primary_server }} --eval "db.getSiblingDB('admin').createUser({user: '{{ admin_username }}', pwd: '{{ admin_password }}', roles: ['root']})"
+    
+    - name: Create Cluster Admin User
+      shell: |
+        mongo --host {{ primary_server }} --eval "db.getSiblingDB('admin').createUser({user: '{{ cluster_admin_username }}', pwd: '{{ cluster_admin_password }}', roles: ['clusterAdmin']})"
+    
+    - name: Create User1 with ReadWrite Access on Test1 Database
+      shell: |
+        mongo --host {{ primary_server }} --eval "db.getSiblingDB('test1').createUser({user: '{{ user1_username }}', pwd: '{{ user1_password }}', roles: ['readWrite']})"
+    
+    - name: Create User2 with ReadWrite Access on Test2 Database
+      shell: |
+        mongo --host {{ primary_server }} --eval "db.getSiblingDB('test2').createUser({user: '{{ user2_username }}', pwd: '{{ user2_password }}', roles: ['readWrite']})"
+```
+
+This playbook combines the configuration of the replica set, creation of databases, and user management tasks. Replace the placeholders with your specific values for hostnames, ports, usernames, and passwords.
+
+Run the playbook using the `ansible-playbook` command:
+
+```bash
+ansible-playbook configure_mongodb_replica_set.yml
+```
+
+Ensure that you have Ansible set up and configured correctly on your control machine and that you've defined your inventory file with the MongoDB server hostnames and non-default ports.
