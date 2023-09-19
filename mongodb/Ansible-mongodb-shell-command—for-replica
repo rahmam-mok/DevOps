@@ -1,0 +1,46 @@
+---
+- name: Initialize MongoDB Replica Set and Configure Users
+  hosts: your_mongodb_servers
+  become: yes  # If you need sudo privileges
+  vars:
+    primary_server: "your_primary_server_hostname"
+    secondary1_server: "hostname_of_secondary1:port1"  # e.g., "mongodb2.example.com:27018"
+    secondary2_server: "hostname_of_secondary2:port2"  # e.g., "mongodb3.example.com:27019"
+    arbiter_server: "hostname_of_arbiter:port3"  # e.g., "mongodb4.example.com:27020"
+    admin_username: "admin"
+    admin_password: "admin_password"
+    cluster_admin_username: "cluster_admin"
+    cluster_admin_password: "cluster_admin_password"
+    user1_username: "user1"
+    user1_password: "user1_password"
+    user2_username: "user2"
+    user2_password: "user2_password"
+    
+  tasks:
+    - name: Initialize Replica Set
+      shell: |
+        mongo --host {{ primary_server }} --eval "rs.initiate({_id: 'your_replset_name', members: [{_id: 0, host: '{{ primary_server }}', priority: 2, votes: 1}, {_id: 1, host: '{{ secondary1_server }}', priority: 1.5, votes: 1}, {_id: 2, host: '{{ secondary2_server }}', priority: 1, votes: 1}, {_id: 3, host: '{{ arbiter_server }}', arbiterOnly: true, priority: 0, votes: 0}]})"
+        
+    - name: Create Test1 Database
+      shell: |
+        mongo --host {{ primary_server }} --eval "use test1"
+    
+    - name: Create Test2 Database
+      shell: |
+        mongo --host {{ primary_server }} --eval "use test2"
+    
+    - name: Create Admin User
+      shell: |
+        mongo --host {{ primary_server }} --eval "db.getSiblingDB('admin').createUser({user: '{{ admin_username }}', pwd: '{{ admin_password }}', roles: ['root']})"
+    
+    - name: Create Cluster Admin User
+      shell: |
+        mongo --host {{ primary_server }} --eval "db.getSiblingDB('admin').createUser({user: '{{ cluster_admin_username }}', pwd: '{{ cluster_admin_password }}', roles: ['clusterAdmin']})"
+    
+    - name: Create User1 with ReadWrite Access on Test1 Database
+      shell: |
+        mongo --host {{ primary_server }} --eval "db.getSiblingDB('test1').createUser({user: '{{ user1_username }}', pwd: '{{ user1_password }}', roles: ['readWrite']})"
+    
+    - name: Create User2 with ReadWrite Access on Test2 Database
+      shell: |
+        mongo --host {{ primary_server }} --eval "db.getSiblingDB('test2').createUser({user: '{{ user2_username }}', pwd: '{{ user2_password }}', roles: ['readWrite']})"
