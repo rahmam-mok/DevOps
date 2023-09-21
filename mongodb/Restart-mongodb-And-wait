@@ -1,0 +1,42 @@
+To restart the MongoDB service using Ansible and wait until the service is restarted, you can use the `systemd` module along with `async` and `poll` parameters to achieve this. Here's an example Ansible playbook:
+
+```yaml
+---
+- name: Restart MongoDB service
+  hosts: your_target_host
+  tasks:
+    - name: Restart MongoDB service
+      systemd:
+        name: mongod
+        state: restarted
+      async: 600  # This sets a timeout of 600 seconds (adjust as needed)
+      poll: 0     # This makes Ansible wait without polling until the async task is done
+
+    - name: Wait for MongoDB service to restart
+      async_status:
+        jid: "{{ ansible_job_id }}"
+      register: job_result
+      until: job_result.finished
+      retries: 60  # Adjust the number of retries as needed
+      delay: 10    # Adjust the delay between retries as needed
+
+    - name: Check if MongoDB service restarted successfully
+      assert:
+        that: "'Active: active (running)' in mongodb_status.stdout"
+```
+
+In this playbook:
+
+1. Replace `your_target_host` with the host where MongoDB is installed.
+
+2. The `systemd` module is used to restart the `mongod` service.
+
+3. We use the `async` parameter to allow Ansible to run the task asynchronously for a specified timeout (600 seconds in this example). The `poll` parameter is set to 0, which means Ansible will not actively poll the task but wait until it's completed.
+
+4. The `async_status` module is used to check the status of the asynchronous task. We register the result in the `job_result` variable.
+
+5. The `until` parameter in the third task ensures that Ansible waits until the asynchronous task is finished (i.e., the MongoDB service is restarted). It will retry up to 60 times with a delay of 10 seconds between retries. Adjust these values based on your requirements.
+
+6. The final task uses the `assert` module to check if the MongoDB service has successfully restarted by looking for the "Active: active (running)" string in the service status output. You can modify this check based on how MongoDB reports its status.
+
+This playbook will restart the MongoDB service and wait until it's restarted before proceeding with other tasks.
