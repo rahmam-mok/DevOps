@@ -1,0 +1,71 @@
+To print the Twistlock version installed, scan a Docker image using Twistlock, and generate HTML reports in a Jenkins pipeline, you can use the following pipeline code:
+
+```groovy
+pipeline {
+    agent any
+
+    stages {
+        stage('Print Twistlock Version') {
+            steps {
+                script {
+                    def twistlockVersionCmd = """
+                        twistcli --version
+                    """
+                    sh twistlockVersionCmd
+                }
+            }
+        }
+
+        stage('Build and Push Docker Image') {
+            steps {
+                // Replace this with your Docker image build and push steps
+                sh 'docker build -t your-image:tag .'
+                sh 'docker push your-image:tag'
+            }
+        }
+
+        stage('Scan Docker Image with Twistlock') {
+            steps {
+                script {
+                    def twistlockCmd = """
+                        twistcli images scan your-image:tag --output-file twistlock-scan-results.json
+                    """
+                    sh twistlockCmd
+                }
+            }
+        }
+
+        stage('Generate HTML Report') {
+            steps {
+                script {
+                    def convertCmd = """
+                        twistcli convert results twistlock-scan-results.json --output-file twistlock-scan-report.html
+                    """
+                    sh convertCmd
+                }
+                archiveArtifacts artifacts: 'twistlock-scan-report.html', allowEmptyArchive: true
+            }
+        }
+    }
+
+    post {
+        always {
+            // Add any post-build steps or notifications here
+        }
+    }
+}
+```
+
+In this pipeline:
+
+1. The first stage, "Print Twistlock Version," uses the `twistcli --version` command to print the Twistlock version installed on the Jenkins agent.
+
+2. The second stage, "Build and Push Docker Image," builds and pushes the Docker image to your container registry. Adjust these steps as needed for your specific use case.
+
+3. The third stage, "Scan Docker Image with Twistlock," scans the Docker image using the Twistlock CLI tool and saves the results in a JSON file (`twistlock-scan-results.json`).
+
+4. The fourth stage, "Generate HTML Report," converts the JSON scan results into an HTML report using the `twistcli convert` command and archives it as an artifact.
+
+5. You can customize the post-build steps for notifications, artifact management, or other actions as needed.
+
+Ensure that you have the Twistlock CLI tool installed on the Jenkins agent where this pipeline is executed. Adjust the paths and file names as needed for your specific setup.
