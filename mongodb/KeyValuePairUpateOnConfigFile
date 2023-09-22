@@ -1,0 +1,25 @@
+To update a key-value pair in the `mongod.conf` file using Ansible, you can use the `lineinfile` module. Here's an example Ansible playbook to achieve this:
+
+```yaml
+---
+- name: Update key-value pair in mongod.conf
+  hosts: your_target_host
+  tasks:
+    - name: Update mongod.conf
+      lineinfile:
+        path: /etc/mongod.conf  # Path to your mongod.conf file
+        regexp: '^#?{{ your_key }}:'  # Use regex to match the key (with or without a '#' comment)
+        line: '{{ your_key }}: {{ your_new_value }}'
+      become: yes  # This ensures that Ansible runs the task with sudo privileges
+```
+
+In this playbook:
+
+- Replace `your_target_host` with the host where MongoDB is installed.
+- Update `/etc/mongod.conf` with the actual path to your `mongod.conf` file.
+- Replace `your_key` with the key you want to update in the `mongod.conf` file.
+- Replace `your_new_value` with the new value you want to set for the key.
+
+The `lineinfile` module will search for the line that matches the specified key (with or without a '#' comment) and update it with the new value. The `become: yes` option is used to ensure that Ansible has the necessary privileges to modify the `mongod.conf` file.
+
+Make sure to run this playbook with the necessary permissions and backup your configuration files before making changes.
