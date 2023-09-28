@@ -1,0 +1,30 @@
+To add users or groups to the "Log on as a service" local security policy on a Windows Server using PowerShell, you can utilize the `secedit` command, just like in the previous response. Here's a PowerShell script to accomplish this:
+
+```powershell
+# Define the username or group name you want to add
+$userOrGroupName = "YourUsernameOrGroupName"
+
+# Create a security template file (.inf)
+$infFilePath = "C:\Path\To\LogOnAsServicePolicy.inf"
+@"
+[Unicode]
+Unicode=yes
+[System Access]
+SeServiceLogonRight = *$userOrGroupName
+"@ | Out-File -FilePath $infFilePath -Encoding ASCII
+
+# Apply the security template to the local security policy
+secedit /configure /db C:\Windows\security\local.sdb /cfg $infFilePath /areas SecurityPolicy
+
+# Clean up the temporary .inf file
+Remove-Item $infFilePath
+
+# Output a message indicating success
+Write-Host "User or group '$userOrGroupName' added to 'Log on as a service' policy."
+```
+
+Make sure to replace `"YourUsernameOrGroupName"` with the actual username or group name you want to add to the "Log on as a service" policy.
+
+Save the script to a `.ps1` file and then run it using an elevated PowerShell prompt on your Windows Server. It will create a temporary `.inf` file, apply the policy change, and then remove the temporary file.
+
+Always exercise caution when modifying security policies, and ensure you have appropriate permissions to make these changes on your Windows Server.
