@@ -1,0 +1,55 @@
+Creating an AWS Cognito User Pool using Terraform requires defining the necessary AWS resources in a Terraform script. Below is an example Terraform configuration that creates a basic Cognito User Pool:
+
+```hcl
+provider "aws" {
+  region = "us-east-1"  # Change to your desired AWS region
+}
+
+resource "aws_cognito_user_pool" "example" {
+  name = "example-user-pool"
+
+  # Define user pool policies and settings here
+  # For example, password policies, MFA, etc.
+
+  # Define user pool schema attributes
+  schema {
+    name = "email"
+    attribute_data_type = "String"
+    required = true
+  }
+
+  schema {
+    name = "custom_attribute"
+    attribute_data_type = "String"
+    required = false
+  }
+
+  # Add more schema attributes as needed
+
+  # Define user pool client
+  client {
+    name = "example-client"
+    generate_secret = true
+    allowed_oauth_flows_user_pool_client = true
+    allowed_oauth_flows = ["code"]
+    allowed_oauth_scopes = ["openid", "email", "profile"]
+  }
+
+  # Define triggers, lambdas, and other advanced settings if needed
+}
+
+# Optional: You can also create an AWS Cognito User Pool Domain
+resource "aws_cognito_user_pool_domain" "example_domain" {
+  domain   = "example-domain"
+  user_pool_id = aws_cognito_user_pool.example.id
+}
+
+# Optional: Define IAM role for Cognito triggers, if needed
+resource "aws_iam_role" "cognito_triggers_role" {
+  name = "cognito-triggers-role"
+  # Define permissions for your Cognito triggers
+  # Example: AssumeRolePolicyDocument and PolicyAttachment
+}
+```
+
+Make sure to customize the above script according to your specific requirements, including the AWS region, user pool settings, schema attributes, and any additional resources like user pool domains or IAM roles for triggers. After creating this Terraform script, you can use `terraform init`, `terraform plan`, and `terraform apply` to provision the AWS Cognito User Pool.
