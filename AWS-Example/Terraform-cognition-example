@@ -1,0 +1,29 @@
+Certainly! Here's an example Terraform script to create an Amazon Cognito User Pool and add tags to it:
+
+```hcl
+provider "aws" {
+  region = "us-east-1" # Change this to your desired region
+}
+
+resource "aws_cognito_user_pool" "example_user_pool" {
+  name = "my-example-user-pool" # Change this to your desired user pool name
+
+  tags = {
+    Name        = "MyExampleUserPool"
+    Environment = "Production"
+  }
+}
+
+output "user_pool_id" {
+  value = aws_cognito_user_pool.example_user_pool.id
+}
+```
+
+In this script:
+
+1. We define the AWS provider and specify the desired region.
+2. We create an Amazon Cognito User Pool using the `aws_cognito_user_pool` resource. Replace `"my-example-user-pool"` with your desired user pool name.
+3. We add tags to the User Pool using the `tags` block within the resource block. You can add as many tags as needed, specifying the tag name and value pairs.
+4. Finally, we define an output to display the User Pool ID, which can be useful for referencing it in other Terraform configurations.
+
+Make sure you have the AWS CLI configured with the appropriate credentials and permissions to execute this Terraform script. You can customize other settings for your Cognito User Pool, such as user attributes, policies, and app clients, based on your requirements.
