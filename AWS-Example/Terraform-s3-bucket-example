@@ -1,0 +1,30 @@
+Certainly! Here's an example Terraform script to create an S3 bucket and add tags to it:
+
+```hcl
+provider "aws" {
+  region = "us-east-1" # Change this to your desired region
+}
+
+resource "aws_s3_bucket" "example_bucket" {
+  bucket = "my-example-bucket" # Change this to your desired bucket name
+  acl    = "private"           # You can change the ACL as needed
+
+  tags = {
+    Name        = "MyExampleBucket"
+    Environment = "Production"
+  }
+}
+
+output "bucket_name" {
+  value = aws_s3_bucket.example_bucket.id
+}
+```
+
+In this script:
+
+1. We define the AWS provider and specify the desired region.
+2. We create an S3 bucket using the `aws_s3_bucket` resource. Make sure to replace `"my-example-bucket"` with your desired bucket name and adjust the ACL (Access Control List) as needed.
+3. We add tags to the S3 bucket using the `tags` block within the resource block. You can add as many tags as needed, specifying the tag name and value pairs.
+4. Finally, we define an output to display the bucket name, which can be useful for referencing it in other Terraform configurations.
+
+Make sure you have the AWS CLI configured with the appropriate credentials and permissions to execute this Terraform script. You can also customize other settings, such as versioning or logging, based on your requirements.
