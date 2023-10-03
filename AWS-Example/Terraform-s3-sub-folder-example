@@ -1,0 +1,41 @@
+Certainly! Below is an example Terraform script that creates an Amazon S3 bucket, creates subfolders inside the bucket, and tags the bucket:
+
+```hcl
+provider "aws" {
+  region = "us-east-1"  # Replace with your desired AWS region
+}
+
+resource "aws_s3_bucket" "example" {
+  bucket = "example-bucket-name"  # Replace with your desired bucket name
+  acl    = "private"
+
+  tags = {
+    Name        = "ExampleBucket"
+    Environment = "Production"
+  }
+}
+
+resource "aws_s3_bucket_object" "subfolder1" {
+  bucket = aws_s3_bucket.example.id
+  key    = "subfolder1/"
+}
+
+resource "aws_s3_bucket_object" "subfolder2" {
+  bucket = aws_s3_bucket.example.id
+  key    = "subfolder2/"
+}
+
+output "bucket_name" {
+  value = aws_s3_bucket.example.bucket
+}
+```
+
+In this script:
+
+1. We specify the AWS provider with your desired region.
+2. We create an S3 bucket named "example-bucket-name" (replace with your desired bucket name) with private ACL.
+3. We add tags to the S3 bucket to provide metadata.
+
+We create two subfolders inside the S3 bucket using `aws_s3_bucket_object` resources. You can customize the subfolder names and structure as needed.
+
+Make sure to replace the bucket name, region, and other details as per your requirements. You can use the `terraform init`, `terraform plan`, and `terraform apply` commands to initialize, plan, and apply this Terraform configuration.
