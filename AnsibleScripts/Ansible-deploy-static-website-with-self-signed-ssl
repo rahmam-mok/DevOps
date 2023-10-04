@@ -1,0 +1,90 @@
+To deploy a single HTML page on an Apache server running on Red Hat 8 and install an SSL certificate to allow the website to be accessible only via HTTPS without using Certbot, you can generate a self-signed SSL certificate and configure Apache manually using an Ansible playbook. Here are the steps:
+
+1. **Install Ansible:**
+   Ensure that Ansible is installed on your local machine.
+
+2. **Create an Ansible Playbook:**
+   Create a playbook, e.g., `deploy_website.yml`, and define the tasks within it.
+
+```yaml
+---
+- name: Deploy HTML page and enable HTTPS
+  hosts: your_server
+  become: yes
+  tasks:
+    - name: Install Apache
+      dnf:
+        name: httpd
+        state: present
+
+    - name: Start and enable Apache
+      systemd:
+        name: httpd
+        enabled: yes
+        state: started
+
+    - name: Copy HTML page to Apache Document Root
+      copy:
+        src: path_to_your_index.html
+        dest: /var/www/html/index.html
+
+    - name: Generate Self-Signed SSL Certificate
+      openssl_certificate:
+        path_cert: /etc/httpd/ssl/your_domain.crt
+        path_key: /etc/httpd/ssl/your_domain.key
+        common_name: your_domain.com
+        days: 365
+
+    - name: Configure Apache for HTTPS
+      template:
+        src: templates/ssl.conf.j2
+        dest: /etc/httpd/conf.d/ssl.conf
+      notify:
+        - Restart Apache
+
+    - name: Configure HTTPS-only access
+      lineinfile:
+        path: /etc/httpd/conf.d/ssl.conf
+        line: "Redirect permanent / https://your_domain.com/"
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      systemd:
+        name: httpd
+        state: restarted
+```
+
+In this playbook:
+- Replace `your_server` with the hostname or IP address of your Red Hat 8 server.
+- Replace `path_to_your_index.html` with the actual path to your HTML page.
+- Replace `your_domain.com` with your website's domain name.
+
+3. **Create an SSL Configuration Template:**
+   Create an SSL configuration template file, e.g., `ssl.conf.j2`, in a `templates` directory within the same directory as your playbook. Here's an example template:
+
+```apacheconf
+<VirtualHost *:443>
+    ServerName your_domain.com
+    DocumentRoot /var/www/html
+    SSLEngine on
+    SSLCertificateFile /etc/httpd/ssl/your_domain.crt
+    SSLCertificateKeyFile /etc/httpd/ssl/your_domain.key
+    # ... other SSL settings ...
+
+    # Add the following line to enforce HTTPS-only access
+    Redirect permanent / https://your_domain.com/
+</VirtualHost>
+```
+
+4. **Run the Ansible Playbook:**
+   Run the playbook using the `ansible-playbook` command:
+
+```bash
+ansible-playbook deploy_website.yml
+```
+
+This playbook will deploy your HTML page, generate a self-signed SSL certificate, and configure Apache to enforce HTTPS-only access without using Certbot. Make sure your server is reachable from your Ansible control machine, and that SSH keys are set up for authentication.
+
+After running the playbook successfully, your website will be accessible only via HTTPS, and your HTML page will be served securely by Apache on Red Hat 8. Note that self-signed certificates are not trusted by browsers, so users may see a security warning when visiting the site. For a production environment, consider obtaining a trusted SSL certificate from a Certificate Authority.
