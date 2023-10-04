@@ -1,0 +1,70 @@
+To deploy a single HTML page on an Apache server running on Red Hat 8 and install an SSL certificate to allow the website to be accessible only via HTTPS using Ansible, you can create an Ansible playbook that performs these tasks. Here's a step-by-step guide:
+
+1. **Install Ansible:**
+   Ensure that Ansible is installed on your local machine.
+
+2. **Create an Ansible Playbook:**
+   Create a playbook, e.g., `deploy_website.yml`, and define the tasks within it.
+
+```yaml
+---
+- name: Deploy HTML page and enable HTTPS
+  hosts: your_server
+  become: yes
+  tasks:
+    - name: Install Apache
+      dnf:
+        name: httpd
+        state: present
+
+    - name: Start and enable Apache
+      systemd:
+        name: httpd
+        enabled: yes
+        state: started
+
+    - name: Copy HTML page to Apache Document Root
+      copy:
+        src: path_to_your_index.html
+        dest: /var/www/html/index.html
+
+    - name: Install Certbot and Apache plugin
+      dnf:
+        name: certbot python3-certbot-apache
+        state: present
+
+    - name: Obtain SSL certificate
+      command: certbot --apache -d your_domain.com --non-interactive --agree-tos --email your_email@example.com
+      args:
+        creates: /etc/letsencrypt/live/your_domain.com/fullchain.pem
+
+    - name: Configure HTTPS-only access
+      lineinfile:
+        path: /etc/httpd/conf.d/ssl.conf
+        line: "Redirect permanent / https://your_domain.com/"
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      systemd:
+        name: httpd
+        state: restarted
+```
+
+In this playbook:
+- Replace `your_server` with the hostname or IP address of your Red Hat 8 server.
+- Replace `path_to_your_index.html` with the actual path to your HTML page.
+- Replace `your_domain.com` with your website's domain name.
+- Replace `your_email@example.com` with your email address.
+
+3. **Run the Ansible Playbook:**
+   Run the playbook using the `ansible-playbook` command:
+
+```bash
+ansible-playbook deploy_website.yml
+```
+
+This playbook will deploy your HTML page, install an SSL certificate, and configure Apache to enforce HTTPS-only access. Make sure your server is reachable from your Ansible control machine, and that SSH keys are set up for authentication.
+
+After running the playbook successfully, your website will be accessible only via HTTPS, and your HTML page will be served securely by Apache on Red Hat 8.
