@@ -1,0 +1,101 @@
+To install Nagios on a Red Hat-based system (such as CentOS or RHEL) using Ansible, you can create an Ansible playbook. Here's a simple example of a playbook to install Nagios Core. Make sure you have Ansible installed on your control node before proceeding.
+
+1. Create an Ansible playbook file, e.g., `install_nagios.yml`:
+
+```yaml
+---
+- name: Install Nagios on Red Hat
+  hosts: your_server_group
+  become: yes
+  tasks:
+    - name: Install required packages
+      yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - httpd
+        - php
+        - gcc
+        - glibc
+        - glibc-common
+        - gd
+        - gd-devel
+        - perl
+        - perl-devel
+        - unzip
+
+    - name: Download Nagios Core
+      get_url:
+        url: "https://github.com/NagiosEnterprises/nagioscore/archive/nagios-4.4.6.tar.gz"
+        dest: /tmp/nagios-core.tar.gz
+
+    - name: Extract Nagios Core
+      unarchive:
+        src: /tmp/nagios-core.tar.gz
+        dest: /tmp/
+        remote_src: yes
+        creates: /tmp/nagioscore-nagios-4.4.6
+
+    - name: Compile and Install Nagios Core
+      command: "make all"
+      args:
+        chdir: "/tmp/nagioscore-nagios-4.4.6"
+      notify:
+        - Start Nagios Service
+
+    - name: Add Apache Configuration
+      template:
+        src: nagios.conf.j2
+        dest: /etc/httpd/conf.d/nagios.conf
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Start Nagios Service
+      service:
+        name: nagios
+        state: started
+
+    - name: Restart Apache
+      service:
+        name: httpd
+        state: restarted
+```
+
+2. Create a Jinja2 template for the Apache configuration. Name it `nagios.conf.j2` and place it in the same directory as your playbook:
+
+```apache
+ScriptAlias /nagios/cgi-bin "/usr/local/nagios/sbin"
+<Directory "/usr/local/nagios/sbin">
+    Options ExecCGI
+    AllowOverride None
+    Order allow,deny
+    Allow from all
+    AuthName "Nagios Access"
+    AuthType Basic
+    AuthUserFile /usr/local/nagios/etc/htpasswd.users
+    Require valid-user
+</Directory>
+
+Alias /nagios "/usr/local/nagios/share"
+<Directory "/usr/local/nagios/share">
+    Options None
+    AllowOverride None
+    Order allow,deny
+    Allow from all
+    AuthName "Nagios Access"
+    AuthType Basic
+    AuthUserFile /usr/local/nagios/etc/htpasswd.users
+    Require valid-user
+</Directory>
+```
+
+3. Ensure you replace `your_server_group` with the appropriate Ansible inventory group containing your Red Hat server(s).
+
+4. Run the Ansible playbook:
+
+```bash
+ansible-playbook install_nagios.yml
+```
+
+This playbook installs the necessary dependencies, downloads and compiles Nagios Core, configures Apache for Nagios, and starts the Nagios service. You may need to modify this playbook based on your specific requirements and environment. Additionally, you should consider setting up Nagios plugins, configuring contacts, and other aspects for a complete Nagios setup.
