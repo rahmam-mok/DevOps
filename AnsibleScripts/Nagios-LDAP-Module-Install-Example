@@ -1,0 +1,69 @@
+To install the Nagios LDAP module and configure LDAP or Active Directory authentication, you'll need to perform two main tasks: 
+
+1. Install the LDAP module for Nagios.
+2. Configure Nagios to use LDAP or Active Directory for authentication.
+
+Here's an Ansible playbook that accomplishes these tasks:
+
+```yaml
+---
+- name: Install Nagios LDAP Module and Configure LDAP/AD Authentication
+  hosts: your_nagios_server
+  become: yes
+  tasks:
+    - name: Install required LDAP development packages
+      package:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - openldap-devel
+        - php-ldap
+        - nagios-plugins-ldap  # This is an example; adjust the package name as needed for your distribution.
+
+    - name: Enable LDAP module in Nagios configuration
+      lineinfile:
+        path: /etc/nagios/nagios.cfg  # Modify the path if your configuration file is located elsewhere.
+        regexp: "^broker_module="
+        line: "broker_module=/usr/lib/nagios/brokers/ldap.so"
+        state: present
+
+    - name: Configure LDAP/AD Authentication
+      template:
+        src: ldap_auth.cfg.j2
+        dest: /etc/nagios/ldap_auth.cfg
+      notify:
+        - Restart Nagios
+
+  handlers:
+    - name: Restart Nagios
+      service:
+        name: nagios
+        state: restarted
+```
+
+In this playbook:
+
+1. The first task installs the required LDAP development packages and the `php-ldap` package, which provides LDAP support for PHP used by Nagios.
+
+2. The second task enables the LDAP module by adding the necessary line to the Nagios configuration file. Be sure to adjust the `path` to your actual Nagios configuration file path.
+
+3. The third task configures LDAP/AD authentication by creating an LDAP configuration file named `ldap_auth.cfg`. Here's an example `ldap_auth.cfg.j2` template:
+
+```ini
+define command {
+    command_name    check_ldap
+    command_line    $USER1$/check_ldap -H ldap://your_ldap_server -b "cn=Users,dc=example,dc=com" -D "cn=admin,dc=example,dc=com" -P "your_ldap_password" -3 $ARG1$
+}
+```
+
+Modify the LDAP server URL, base DN, bind DN, and password to match your LDAP or Active Directory configuration.
+
+4. After enabling the LDAP module and configuring LDAP/AD authentication, the playbook notifies the "Restart Nagios" handler to restart the Nagios service to apply the changes.
+
+Run the Ansible playbook with:
+
+```bash
+ansible-playbook install_nagios_ldap.yml
+```
+
+This playbook installs the LDAP module for Nagios and configures it to use LDAP/AD for user authentication. Customize it further to suit your specific distribution and environment if needed.
