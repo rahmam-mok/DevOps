@@ -1,0 +1,107 @@
+To install the Nagios agent (NRPE - Nagios Remote Plugin Executor) on a Red Hat Enterprise Server, configure it to monitor server disks, CPU, and SSL certificate expiration dates, and set up alerts when conditions are met, you can create a comprehensive Ansible playbook. Here's a playbook to achieve this:
+
+1. Create an Ansible playbook file, e.g., `configure_nagios_agent.yml`:
+
+```yaml
+---
+- name: Install Nagios NRPE on Red Hat
+  hosts: your_server_group
+  become: yes
+  tasks:
+    - name: Install EPEL repository
+      yum:
+        name: epel-release
+        state: present
+
+    - name: Install NRPE package
+      yum:
+        name: nrpe
+        state: present
+
+    - name: Install NRPE plugins
+      yum:
+        name: nrpe-plugins
+        state: present
+
+    - name: Start and enable NRPE service
+      service:
+        name: nrpe
+        state: started
+        enabled: yes
+
+    - name: Configure NRPE to allow Nagios server
+      template:
+        src: nrpe.cfg.j2
+        dest: /etc/nagios/nrpe.cfg
+      notify:
+        - Restart NRPE
+
+    - name: Create a disk check command
+      template:
+        src: check_disk.cfg.j2
+        dest: /etc/nagios/nrpe.d/check_disk.cfg
+
+    - name: Create a CPU check command
+      template:
+        src: check_cpu.cfg.j2
+        dest: /etc/nagios/nrpe.d/check_cpu.cfg
+
+    - name: Create an SSL certificate check command
+      template:
+        src: check_ssl_cert.cfg.j2
+        dest: /etc/nagios/nrpe.d/check_ssl_cert.cfg
+      notify:
+        - Restart NRPE
+
+  handlers:
+    - name: Restart NRPE
+      service:
+        name: nrpe
+        state: restarted
+```
+
+2. Create Jinja2 templates for the NRPE configuration and checks:
+
+**nrpe.cfg.j2:**
+
+```ini
+server_address=127.0.0.1
+allowed_hosts=your_nagios_server_ip
+```
+
+Replace `your_nagios_server_ip` with the IP address of your Nagios server.
+
+**check_disk.cfg.j2:**
+
+```ini
+command[check_disk]=/usr/lib/nagios/plugins/check_disk -w 20% -c 10% -p /
+```
+
+**check_cpu.cfg.j2:**
+
+```ini
+command[check_cpu]=/usr/lib/nagios/plugins/check_cpu.sh 80 90
+```
+
+**check_ssl_cert.cfg.j2:**
+
+```ini
+command[check_ssl_cert]=/usr/lib/nagios/plugins/check_ssl_cert -H your_server_hostname -C 30
+```
+
+Replace `your_server_hostname` with your server's hostname.
+
+3. Run the Ansible playbook:
+
+```bash
+ansible-playbook configure_nagios_agent.yml
+```
+
+This playbook will:
+
+- Install NRPE and its dependencies.
+- Configure NRPE to allow your Nagios server.
+- Create check commands for monitoring disk space, CPU usage, and SSL certificate expiration.
+- Restart the NRPE service to apply the changes.
+
+Make sure to customize the playbook to match your specific requirements, Nagios server IP, and any additional checks you need. Also, you might need to develop custom scripts for SSL certificate expiration checks (`check_ssl_cert`) depending on your environment.
