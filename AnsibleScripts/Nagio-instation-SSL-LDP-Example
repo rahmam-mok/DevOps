@@ -1,0 +1,96 @@
+To install Nagios on Red Hat Enterprise Linux (RHEL) and configure it to use SSL certificates for secure access and authenticate users through Active Directory using Ansible, you can follow these steps.
+
+1. **Install Nagios Core and Required Dependencies**:
+
+Create an Ansible playbook to install Nagios Core and its dependencies. For RHEL, it's essential to use RHEL-specific package repositories or an appropriate subscription management system.
+
+```yaml
+---
+- name: Install Nagios Core on RHEL
+  hosts: your_server_group
+  become: yes
+  tasks:
+    - name: Install required packages
+      package:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - httpd
+        - php
+        - gcc
+        - glibc
+        - glibc-common
+        - gd
+        - gd-devel
+        - perl
+        - perl-devel
+        - unzip
+        # Add any other packages specific to RHEL
+
+    - name: Download Nagios Core
+      get_url:
+        url: "https://github.com/NagiosEnterprises/nagioscore/archive/nagios-4.4.6.tar.gz"
+        dest: /tmp/nagios-core.tar.gz
+
+    # ... Continue with extraction, compilation, and Apache configuration from the previous example.
+```
+
+2. **Generate SSL Certificate**:
+
+Generate an SSL certificate for Nagios. You can use tools like OpenSSL or Ansible's `openssl_certificate` module to generate the SSL certificate. Here's an example using OpenSSL:
+
+```yaml
+- name: Generate SSL Certificate
+  command: >
+    openssl req -x509 -nodes -days 365
+    -newkey rsa:2048
+    -keyout /etc/ssl/private/nagios.key
+    -out /etc/ssl/certs/nagios.crt
+  args:
+    creates: /etc/ssl/certs/nagios.crt
+  notify:
+    - Restart Apache
+```
+
+3. **Configure Nagios for SSL**:
+
+Modify the Apache configuration to enable SSL for Nagios:
+
+```apache
+# Update nagios.conf.j2
+<VirtualHost *:443>
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/certs/nagios.crt
+    SSLCertificateKeyFile /etc/ssl/private/nagios.key
+    # Include other SSL settings as needed
+
+    # ... Existing Nagios configuration
+</VirtualHost>
+```
+
+4. **Integrate with Active Directory for Authentication**:
+
+To configure Nagios to authenticate users through Active Directory, you need to use an authentication method such as LDAP or AD. You should also have the `ldap` or `ad` module installed. Update the Nagios configuration to use LDAP/AD for user authentication:
+
+```apache
+# Update nagios.conf.j2
+AuthType Basic
+AuthName "Nagios Access"
+AuthBasicProvider ldap
+AuthLDAPURL "ldap://your_ad_server:389/ou=Users,dc=example,dc=com?uid"
+AuthLDAPBindDN "cn=admin,dc=example,dc=com"
+AuthLDAPBindPassword "your_password"
+Require valid-user
+```
+
+Remember to replace the LDAP/AD URL, BindDN, and BindPassword with your specific AD configuration.
+
+5. **Run the Ansible Playbook**:
+
+Execute the Ansible playbook to install Nagios, configure SSL, and set up LDAP/AD authentication:
+
+```bash
+ansible-playbook install_nagios.yml
+```
+
+This playbook covers the installation of Nagios on RHEL, SSL certificate generation, and LDAP/AD integration. Customize it further to suit your specific requirements and environment.
