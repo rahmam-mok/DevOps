@@ -1,0 +1,89 @@
+To create an Elastic Load Balancer (ELB) with a target group, redirect HTTP traffic to HTTPS, attach an SSL certificate by ARN from AWS Certificate Manager (ACM), attach a security group, and add tags to both the ELB and the target group in Terraform, you can use the following configuration. Ensure that you have the necessary AWS provider configuration in your Terraform code before creating the resources. Here's an example:
+
+```hcl
+provider "aws" {
+  region = "us-east-1" # Replace with your desired AWS region
+}
+
+resource "aws_security_group" "pft-sg" {
+  name        = "pft-sg"
+  description = "PFT Security Group"
+  # Add your security group rules here
+}
+
+resource "aws_lb" "pft-dev-elb" {
+  name               = "pft-dev-elb"
+  internal           = false # Set to true if internal ELB is needed
+  load_balancer_type = "application"
+
+  enable_deletion_protection = false # Set to true if you want to enable deletion protection
+
+  subnets = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"] # Replace with your subnet IDs
+
+  enable_http2         = true # Optional
+  idle_timeout        = 60   # Optional
+
+  enable_cross_zone_load_balancing = true # Optional
+
+  security_groups = [aws_security_group.pft-sg.id]
+
+  enable_deletion_protection = false
+
+  tags = {
+    Name = "pft-dev-elb"
+    Environment = "Development"
+  }
+}
+
+resource "aws_lb_listener" "pft-dev-http-listener" {
+  load_balancer_arn = aws_lb.pft-dev-elb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+resource "aws_lb_listener" "pft-dev-https-listener" {
+  load_balancer_arn = aws_lb.pft-dev-elb.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = "arn:aws:acm:us-east-1:123456789012:certificate/your-acm-certificate-arn"
+
+  default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      status_code  = "200"
+      content      = "OK"
+    }
+  }
+}
+
+resource "aws_lb_target_group" "pft-dev-tg" {
+  name        = "pft-dev-tg"
+  port        = 443
+  protocol    = "HTTPS"
+  vpc_id      = "vpc-xxxxxxxx" # Replace with your VPC ID
+  target_type = "ip"
+
+  tags = {
+    Name = "pft-dev-tg"
+    Environment = "Development"
+  }
+}
+
+resource "aws_lb_target_group_attachment" "pft-dev-tg-attachment" {
+  target_group_arn = aws_lb_target_group.pft-dev-tg.arn
+  target_id        = "i-xxxxxxxxxx" # Replace with the ID of the instance you want to attach
+}
+```
+
+In this example, the Terraform code creates an ELB, configures two listeners to redirect HTTP to HTTPS and set up the HTTPS listener with the ACM certificate by ARN, and associates a security group. It also adds tags to the ELB and target group. Make sure to replace `"subnet-xxxxxxxx"`, `"subnet-yyyyyyyy"`, `"vpc-xxxxxxxx"`, and `"i-xxxxxxxxxx"` with the appropriate values for your AWS environment. Additionally, replace `"arn:aws:acm:us-east-1:123456789012:certificate/your-acm-certificate-arn"` with your actual ACM certificate ARN. Customize the ACM certificate and security group rules as needed.
