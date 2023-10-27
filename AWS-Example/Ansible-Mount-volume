@@ -1,0 +1,36 @@
+You can use Ansible to mount an additional volume (e.g., `/dev/xvdf`) to the `/log` directory on your target servers. Here's how you can do it:
+
+1. **Create an Ansible Playbook**:
+   Create an Ansible playbook (e.g., `mount_volume.yml`) to define the tasks for mounting the volume. Here's a basic playbook structure:
+
+   ```yaml
+   ---
+   - name: Mount Additional Volume
+     hosts: your_target_servers
+     become: yes  # Use sudo for privileged tasks
+     tasks:
+       - name: Create the /log directory if it doesn't exist
+         file:
+           path: /log
+           state: directory
+
+       - name: Mount the additional volume to /log
+         mount:
+           path: /log
+           src: /dev/xvdf
+           fstype: ext4  # Replace with the appropriate filesystem type
+           state: mounted
+   ```
+
+   Replace `your_target_servers` with the appropriate group or hostname for your servers.
+
+2. **Run the Ansible Playbook**:
+   Execute the Ansible playbook using the `ansible-playbook` command:
+
+   ```bash
+   ansible-playbook mount_volume.yml
+   ```
+
+   Ansible will execute the tasks defined in the playbook on the specified target servers.
+
+Make sure you have Ansible installed and configured to connect to your target servers before running the playbook. This playbook will create the `/log` directory if it doesn't exist, format the volume (make sure to replace `ext4` with the appropriate filesystem type if needed), and then mount the volume to `/log`.
