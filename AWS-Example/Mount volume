@@ -1,0 +1,42 @@
+To mount an additional volume (e.g., `/dev/xvdh`) to the `/data` directory in AWS, you can follow these general steps:
+
+1. **Create an EBS Volume:**
+   - Go to the AWS Management Console.
+   - Navigate to the EC2 service.
+   - Click on "Volumes" in the left sidebar.
+   - Click "Create Volume" to create a new Amazon Elastic Block Store (EBS) volume. Specify the size and other details.
+
+2. **Attach the Volume to your EC2 Instance:**
+   - After creating the volume, select it in the Volumes list.
+   - Click "Actions" and then "Attach Volume."
+   - Choose your EC2 instance from the list and specify the device (e.g., `/dev/xvdh`).
+
+3. **SSH into Your EC2 Instance:**
+   - Use SSH to connect to your EC2 instance.
+
+4. **Check Existing Partitions:**
+   - You should check the existing partitions on the instance using `lsblk` or `fdisk -l` to identify the new volume (`/dev/xvdh`).
+
+5. **Create a File System:**
+   - If the volume is new, you may need to create a file system on it. You can use a command like `mkfs` (e.g., `mkfs -t ext4 /dev/xvdh`) to create an ext4 file system.
+
+6. **Mount the Volume:**
+   - Create a mount point, such as `/data`, if it doesn't already exist:
+     ```
+     sudo mkdir /data
+     ```
+   - Mount the volume to this directory:
+     ```
+     sudo mount /dev/xvdh /data
+     ```
+
+7. **Configure Auto-Mount (Optional):**
+   - To ensure the volume is mounted automatically upon instance reboot, you can add an entry to the `/etc/fstab` file:
+     ```
+     echo '/dev/xvdh /data ext4 defaults,nofail 0 0' | sudo tee -a /etc/fstab
+     ```
+
+8. **Verify the Mount:**
+   - Run `df -h` to confirm that the volume is mounted at `/data`.
+
+Your additional volume `/dev/xvdh` should now be mounted to the `/data` directory on your EC2 instance. Remember to adapt the file system type and mount options to your specific needs.
