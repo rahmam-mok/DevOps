@@ -1,0 +1,44 @@
+The `ldap.conf.j2` template should contain the LDAP client configuration settings necessary to connect to your Active Directory (AD) server for authentication. Below is a basic example of what your `ldap.conf.j2` template might look like:
+
+```ini
+URI ldaps://your_ad_server:636/
+BASE {{ ldap_base_dn }}
+TLS_REQCERT allow
+
+# Use a distinguished name (DN) to bind to the AD server.
+# The DN should have sufficient permissions to perform LDAP searches.
+# Replace 'your_bind_dn' and 'your_bind_password' with appropriate values.
+BINDDN "CN=YourBindUser,OU=ServiceAccounts,DC=example,DC=com"
+BINDPW "YourBindUserPassword"
+
+# The following settings are required for Active Directory.
+# You may need to adjust them based on your AD server's configuration.
+PAM_LOGIN_ATTRIBUTE sAMAccountName
+PAM_MEMBER_ATTRIBUTE memberOf
+PAM_GROUPDN "CN=YourNagiosUsers,OU=Groups,DC=example,DC=com"
+
+# Configure the user and group search bases.
+# Replace 'ou=People,dc=example,dc=com' and 'ou=Groups,dc=example,dc=com' with your AD organization structure.
+BASE   ou=People,dc=example,dc=com
+GROUP  ou=Groups,dc=example,dc=com
+
+# Enable TLS/SSL
+TLS_CACERT /etc/ssl/certs/ca-certificates.crt
+TLS_REQCERT allow
+
+# LDAP search timeout (in seconds)
+TIMEOUT 15
+```
+
+In this template:
+
+- `URI`: Replace `your_ad_server` with the URI of your AD server, including the protocol (ldaps for LDAP over SSL).
+- `BASE`: You should define the search base using the `ldap_base_dn` variable, which should be passed when applying the template.
+- `BINDDN` and `BINDPW`: These should be set to a user with sufficient permissions to perform LDAP searches. Make sure to replace `YourBindUser` and `YourBindUserPassword` with the appropriate values.
+- `PAM_LOGIN_ATTRIBUTE`, `PAM_MEMBER_ATTRIBUTE`, and `PAM_GROUPDN`: These settings are specific to AD and may need to be adjusted based on your AD configuration.
+- `BASE` and `GROUP`: These settings specify the LDAP search bases for users and groups. Modify them to match your AD structure.
+- `TLS_CACERT` and `TLS_REQCERT`: These settings enable SSL/TLS and specify the path to the certificate authority's (CA) certificate file.
+
+You will need to replace `example.com` and other placeholder values with your actual AD server details and organizational structure. Ensure that the LDAP client can establish a secure connection to your AD server, and that the user specified in `BINDDN` has the necessary permissions for LDAP queries.
+
+When applying the template in your Ansible playbook, make sure to pass the `ldap_base_dn` variable with the actual LDAP base DN specific to your AD environment.

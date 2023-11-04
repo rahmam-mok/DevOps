@@ -1,0 +1,130 @@
+To configure Nagios to monitor a MongoDB server, check for service status, and set up email notifications for various conditions, you can follow these steps:
+
+**1. Define Host and Service Configuration**:
+
+Create a host definition for the MongoDB server and define service checks for service status, CPU utilization, and disk space utilization. You should have these configurations in your Nagios configuration files (e.g., `hosts.cfg` and `services.cfg`).
+
+- Define the host for the MongoDB server:
+
+```cfg
+define host {
+    host_name           your_mongodb_server
+    alias               Your MongoDB Server
+    address             1xx.xxx.x.xxx   #Replace with Actual IP
+    max_check_attempts  3
+    check_command       check-host-alive
+    notification_interval 60
+}
+```
+
+- Define the service checks for MongoDB:
+
+```cfg
+# Service check for MongoDB service status
+define service {
+    host_name           your_mongodb_server
+    service_description MongoDB Service
+    check_command       check_nrpe!check_mongodb_service
+    use                 generic-service
+    notification_interval 60
+}
+
+# Service check for CPU utilization
+define service {
+    host_name           your_mongodb_server
+    service_description CPU Utilization
+    check_command       check_nrpe!check_cpu_utilization!70!90
+    use                 generic-service
+    notification_interval 60
+}
+
+# Service check for /db/logs directory space utilization
+define service {
+    host_name           your_mongodb_server
+    service_description /db/logs Directory Space
+    check_command       check_nrpe!check_disk_utilization!/db/logs!70!90
+    use                 generic-service
+    notification_interval 60
+}
+
+# Service check for /temp/data/ directory space utilization
+define service {
+    host_name           your_mongodb_server
+    service_description /temp/data/ Directory Space
+    check_command       check_nrpe!check_disk_utilization!/temp/data!70!90
+    use                 generic-service
+    notification_interval 60
+}
+```
+
+In these service definitions:
+
+- `check_nrpe` is used to execute commands on the remote MongoDB server.
+- `check_mongodb_service` is a custom NRPE command to check the MongoDB service status.
+- `check_cpu_utilization` and `check_disk_utilization` are custom NRPE commands to check CPU and disk space utilization, respectively.
+
+**2. Define Notification Commands**:
+
+Define notification commands in your `commands.cfg` file to specify how Nagios should send email notifications when the defined thresholds are breached. Here's an example of a notification command for sending email alerts:
+
+```cfg
+define command {
+    command_name    notify-service-by-email
+    command_line    /usr/bin/printf "%b" "***** Nagios *****\n\nNotification Type: $NOTIFICATIONTYPE$\nService: $SERVICEDESC$\nHost: $HOSTALIAS$\nAddress: $HOSTADDRESS$\nState: $SERVICESTATE$\n\nDate/Time: $LONGDATETIME$\n\nAdditional Info:\n\n$SERVICEOUTPUT$\n" | /bin/mail -s "$SERVICESTATE$ Service Alert: $HOSTALIAS$/$SERVICEDESC$ is $SERVICESTATE$ **" $CONTACTEMAIL$
+}
+```
+
+**3. Set Up Contacts and Contact Groups**:
+
+Define contacts and contact groups in your `contacts.cfg` and `contactgroups.cfg` configuration files, as explained in previous responses. Assign contacts or contact groups to the service definitions to receive email notifications when issues are detected.
+
+**4. Configure Email Notifications**:
+
+Ensure that your Nagios server is correctly configured to send email notifications. Verify that email settings are correctly specified in the `contacts.cfg` or `commands.cfg` file.
+
+**5. Restart Nagios**:
+
+After configuring the host, service checks, contacts, and notification settings, restart the Nagios service to apply the changes:
+
+```bash
+sudo service nagios restart
+```
+
+With these configurations in place, Nagios will regularly monitor the MongoDB server for service status, CPU utilization, and disk space utilization in the specified directories. It will send email notifications when issues are detected, such as service stops or utilization exceeding the defined thresholds. Customize the thresholds and configurations to match your specific MongoDB server and monitoring requirements.
+
+
+####################################
+
+The `check_mongodb_service` script should be created and placed on the server where you've installed the NRPE (Nagios Remote Plugin Executor) agent. The specific directory where you should place the script may vary depending on your system and NRPE agent configuration.
+
+Here's a common location for storing custom NRPE check scripts:
+
+1. **NRPE Plugins Directory**:
+   - The `check_mongodb_service` script is often placed in the directory where NRPE plugins are stored. The location of this directory can vary but is typically something like `/usr/lib/nagios/plugins`, `/usr/local/nagios/libexec`, or similar.
+
+You can place the `check_mongodb_service` script in one of these directories, and it's essential to make sure the script is executable. You can do this by running the following command:
+
+```bash
+chmod +x /path/to/check_mongodb_service
+```
+
+Here's an example of what the `check_mongodb_service` script might look like, as mentioned in a previous response:
+
+```bash
+#!/bin/bash
+
+# Check if the MongoDB service is running
+if systemctl is-active mongodb >/dev/null; then
+    echo "MongoDB is running"
+    exit 0
+else
+    echo "MongoDB is not running"
+    exit 2
+fi
+```
+
+This script checks the status of the MongoDB service using `systemctl`. If the MongoDB service is running, it exits with a status code of 0 (OK); otherwise, it exits with a status code of 2 (CRITICAL).
+
+Make sure to adjust the script and path to match your MongoDB service configuration and your system's specifics.
+
+

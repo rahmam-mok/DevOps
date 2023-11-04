@@ -1,0 +1,142 @@
+To configure Nagios to monitor a Tomcat server, check for the Tomcat service status, CPU utilization, and disk space utilization, and set up email notifications for various conditions, you can follow these steps:
+
+**1. Define Host and Service Configuration**:
+
+Create a host definition for the Tomcat server and define service checks for service status, CPU utilization, and disk space utilization. You should have these configurations in your Nagios configuration files (e.g., `hosts.cfg` and `services.cfg`).
+
+- Define the host for the Tomcat server:
+
+```cfg
+define host {
+    host_name           your_tomcat_server
+    alias               Your Tomcat Server
+    address             192.168.1.100
+    max_check_attempts  3
+    check_command       check-host-alive
+    notification_interval 60
+}
+```
+
+- Define the service checks for Tomcat:
+
+```cfg
+# Service check for Tomcat service status
+define service {
+    host_name           your_tomcat_server
+    service_description Tomcat Service
+    check_command       check_nrpe!check_tomcat_service
+    use                 generic-service
+    notification_interval 60
+}
+
+# Service check for CPU utilization
+define service {
+    host_name           your_tomcat_server
+    service_description CPU Utilization
+    check_command       check_nrpe!check_cpu_utilization!70!90
+    use                 generic-service
+    notification_interval 60
+}
+
+# Service check for /home/ directory space utilization
+define service {
+    host_name           your_tomcat_server
+    service_description /home/ Directory Space
+    check_command       check_nrpe!check_disk_utilization!/home!70!90
+    use                 generic-service
+    notification_interval 60
+}
+```
+
+In these service definitions:
+
+- `check_nrpe` is used to execute commands on the remote Tomcat server.
+- `check_tomcat_service` is a custom NRPE command to check the Tomcat service status.
+- `check_cpu_utilization` and `check_disk_utilization` are custom NRPE commands to check CPU and disk space utilization, respectively.
+
+**2. Define Notification Commands**:
+
+Define notification commands in your `commands.cfg` file to specify how Nagios should send email notifications when the defined thresholds are breached. Here's an example of a notification command for sending email alerts:
+
+```cfg
+define command {
+    command_name    notify-service-by-email
+    command_line    /usr/bin/printf "%b" "***** Nagios *****\n\nNotification Type: $NOTIFICATIONTYPE$\nService: $SERVICEDESC$\nHost: $HOSTALIAS$\nAddress: $HOSTADDRESS$\nState: $SERVICESTATE$\n\nDate/Time: $LONGDATETIME$\n\nAdditional Info:\n\n$SERVICEOUTPUT$\n" | /bin/mail -s "$SERVICESTATE$ Service Alert: $HOSTALIAS$/$SERVICEDESC$ is $SERVICESTATE$ **" $CONTACTEMAIL$
+}
+```
+
+**3. Set Up Contacts and Contact Groups**:
+
+Define contacts and contact groups in your `contacts.cfg` and `contactgroups.cfg` configuration files, as explained in previous responses. Assign contacts or contact groups to the service definitions to receive email notifications when issues are detected.
+
+**4. Configure Email Notifications**:
+
+Ensure that your Nagios server is correctly configured to send email notifications. Verify that email settings are correctly specified in the `contacts.cfg` or `commands.cfg` file.
+
+**5. Restart Nagios**:
+
+After configuring the host, service checks, contacts, and notification settings, restart the Nagios service to apply the changes:
+
+```bash
+sudo service nagios restart
+```
+
+With these configurations in place, Nagios will regularly monitor the Tomcat server for service status, CPU utilization, and disk space utilization in the specified directory. It will send email notifications when issues are detected, such as service stops or utilization exceeding the defined thresholds. Customize the thresholds and configurations to match your specific Tomcat server and monitoring requirements.
+
+
+###################################
+
+The `check_tomcat_service` script should be created and placed on the server where you've installed the NRPE (Nagios Remote Plugin Executor) agent. The specific directory where you should place the script may vary depending on your system and NRPE agent configuration.
+
+Here's a common location for storing custom NRPE check scripts:
+
+1. **NRPE Plugins Directory**:
+   - The `check_tomcat_service` script is typically placed in the directory where NRPE plugins are stored. The location of this directory can vary but is usually something like `/usr/lib/nagios/plugins`, `/usr/local/nagios/libexec`, or similar.
+
+You can place the `check_tomcat_service` script in one of these directories, and it's essential to make sure the script is executable. You can do this by running the following command:
+
+```bash
+chmod +x /path/to/check_tomcat_service
+```
+
+The content of the `check_tomcat_service` script should be a command that checks the status of the Tomcat service on the server and returns an appropriate result code to Nagios. Here's a simple example:
+
+```bash
+#!/bin/bash
+
+# Check if the Tomcat service is running
+if systemctl is-active tomcat >/dev/null; then
+    echo "Tomcat service is running"
+    exit 0
+else
+    echo "Tomcat service is not running"
+    exit 2
+fi
+```
+
+In this example:
+
+- The script uses `systemctl` to check if the Tomcat service is active. It returns an exit status of 0 (OK) if the service is running and 2 (CRITICAL) if the service is not running.
+
+Make sure to adjust the script and path to match your Tomcat service configuration and your system's specifics.
+
+
+###############################################
+
+In Nagios, the `commands.cfg` file typically resides in the `objects` directory within your Nagios configuration directory structure. The location of this directory can vary depending on your Nagios installation and how it was set up. Common locations include `/etc/nagios/objects/` or `/usr/local/nagios/etc/objects/`.
+
+Here's an example of what the `commands.cfg` file might contain:
+
+```cfg
+# 'notify-service-by-email' command definition
+define command {
+    command_name    notify-service-by-email
+    command_line    /usr/bin/printf "%b" "***** Nagios *****\n\nNotification Type: $NOTIFICATIONTYPE$\nService: $SERVICEDESC$\nHost: $HOSTALIAS$\nAddress: $HOSTADDRESS$\nState: $SERVICESTATE$\n\nDate/Time: $LONGDATETIME$\n\nAdditional Info:\n\n$SERVICEOUTPUT$\n" | /bin/mail -s "$SERVICESTATE$ Service Alert: $HOSTALIAS$/$SERVICEDESC$ is $SERVICESTATE$ **" $CONTACTEMAIL$
+}
+```
+
+In the above example, we define a command named `notify-service-by-email`. This command is used to send email notifications for service alerts. It specifies the command to execute when a service alert is triggered. The actual command-line for sending email notifications can vary depending on your email setup. In this example, it uses the `/usr/bin/printf` and `/bin/mail` commands to send the email.
+
+This is just one example of a notification command. You may customize it based on your specific email configuration. You can define other custom commands in the `commands.cfg` file as needed for your Nagios monitoring setup.
+
+Remember that Nagios configurations need to be tailored to your specific environment, including the locations of configuration files, paths to scripts, and the structure of your command definitions.

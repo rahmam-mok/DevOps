@@ -1,0 +1,154 @@
+To configure email alerts in Nagios when the JBoss server or service stops or becomes unhealthy, you need to set up the following components:
+
+1. **Nagios Server Configuration**:
+   - Ensure that your Nagios server is configured to send email notifications. This typically involves configuring email settings in the Nagios configuration files.
+
+2. **Service Checks**:
+   - Set up service checks for the JBoss server or service. These checks should monitor the server's health and availability. Define these checks in your `services.cfg` or an appropriate configuration file.
+
+3. **Contact and Contact Groups**:
+   - Define Nagios contacts and contact groups. Contacts represent individuals or groups that should receive alerts, while contact groups help organize multiple contacts into logical groups.
+
+4. **Notification Commands**:
+   - Define notification commands that specify how Nagios should send notifications, including email alerts.
+
+5. **Service and Host Definitions**:
+   - Associate the service checks and notification settings with the JBoss server or service host definitions in your `hosts.cfg` file.
+
+Here's a step-by-step guide:
+
+**1. Configure Email Notifications**:
+
+In your Nagios server configuration files, configure email settings for sending notifications. You'll need to specify the email server, sender's email address, and other email-related parameters. This is typically done in the `commands.cfg` and `contacts.cfg` files.
+
+**2. Define Service Checks**:
+
+Create service checks to monitor the JBoss server or service. These checks should be defined in your `services.cfg` file. Here's an example of a service definition to check if JBoss is running:
+
+```cfg
+define service {
+    host_name           your_server
+    service_description JBoss Status
+    check_command       check_nrpe!check_jboss
+    use                 generic-service
+    notification_interval 60
+}
+```
+
+**3. Create Contact and Contact Groups**:
+
+Define Nagios contacts for individuals or groups that should receive email alerts. You can also create contact groups to organize contacts. Define these in your `contacts.cfg` file. For example:
+
+```cfg
+define contact {
+    contact_name    admin
+    alias           Nagios Admin
+    email           your@email.com
+}
+```
+
+**4. Define Notification Commands**:
+
+Specify how Nagios should send notifications, including email alerts, in your `commands.cfg` file. Here's an example of a notification command for sending email alerts using the `mail` command:
+
+```cfg
+define command {
+    command_name    notify-service-by-email
+    command_line    /usr/bin/printf "%b" "***** Nagios *****\n\nNotification Type: $NOTIFICATIONTYPE$\nService: $SERVICEDESC$\nHost: $HOSTALIAS$\nAddress: $HOSTADDRESS$\nState: $SERVICESTATE$\n\nDate/Time: $LONGDATETIME$\n\nAdditional Info:\n\n$SERVICEOUTPUT$\n" | /bin/mail -s "$SERVICESTATE$ Service Alert: $HOSTALIAS$/$SERVICEDESC$ is $SERVICESTATE$ **" $CONTACTEMAIL$
+}
+```
+
+**5. Associate Service and Host Definitions**:
+
+In your `hosts.cfg` file, associate the service checks with the host definition for the JBoss server or service. Make sure to specify the contact groups that should receive notifications. For example:
+
+```cfg
+define host {
+    host_name           your_server
+    alias               Your Server
+    address             192.168.1.100
+    max_check_attempts  3
+    check_command       check-host-alive
+    notification_interval 60
+    contacts            admin  ; Specify the contact defined in contacts.cfg
+    contact_groups      admins  ; Specify the contact group
+}
+```
+
+**6. Restart Nagios**:
+
+After configuring these settings, restart the Nagios service to apply the changes:
+
+```bash
+sudo service nagios restart
+```
+
+With these configurations in place, Nagios will send email alerts when the JBoss server or service becomes unhealthy or stops responding based on the defined service checks and notification settings.
+
+
+#######################################
+
+
+In Nagios, contacts and contact groups are used to manage who receives notifications for various services and hosts being monitored. Contacts represent individuals or groups of individuals who should receive notifications, while contact groups help organize multiple contacts into logical groups. Here's how to define contacts and contact groups in Nagios:
+
+**Defining Contacts**:
+
+1. Open your Nagios configuration file for contacts, which is typically `contacts.cfg` in the `/usr/local/nagios/etc/` directory.
+
+2. Define a contact using the `define contact` directive. Here's an example:
+
+    ```cfg
+    define contact {
+        contact_name    john_doe
+        alias           John Doe
+        service_notification_period   24x7
+        host_notification_period      24x7
+        service_notification_options  w,u,c,r
+        host_notification_options     d,u,r
+        service_notification_commands notify-service-by-email
+        host_notification_commands    notify-host-by-email
+        email           john.doe@example.com
+    }
+    ```
+
+   In this example:
+   - `contact_name` is a unique identifier for the contact.
+   - `alias` is the name or description of the contact.
+   - `service_notification_period` and `host_notification_period` define the time periods when notifications can be sent (e.g., "24x7" for all the time).
+   - `service_notification_options` and `host_notification_options` specify when notifications are sent (e.g., "w,u,c,r" for warning, unknown, critical, and recovery).
+   - `service_notification_commands` and `host_notification_commands` specify the notification commands to be executed.
+   - `email` is the email address of the contact.
+
+3. You can define multiple contacts in your `contacts.cfg` file by repeating the `define contact` directive with different `contact_name` values.
+
+**Defining Contact Groups**:
+
+1. Open your Nagios configuration file for contact groups, which is typically `contactgroups.cfg` in the `/usr/local/nagios/etc/` directory. If this file does not exist, you can create it.
+
+2. Define a contact group using the `define contactgroup` directive. Here's an example:
+
+    ```cfg
+    define contactgroup {
+        contactgroup_name   admins
+        alias               Nagios Administrators
+        members             john_doe, jane_smith
+    }
+    ```
+
+   In this example:
+   - `contactgroup_name` is a unique identifier for the contact group.
+   - `alias` is the name or description of the contact group.
+   - `members` list the contacts who should be members of this group, separated by commas.
+
+3. You can define multiple contact groups in your `contactgroups.cfg` file by repeating the `define contactgroup` directive with different `contactgroup_name` values.
+
+**Associating Contacts with Hosts and Services**:
+
+To make use of the contacts and contact groups, you'll associate them with hosts and services in your `hosts.cfg` and `services.cfg` configuration files. For example, you'll specify which contacts or contact groups should be notified for specific hosts and services.
+
+After defining contacts and contact groups and associating them with hosts and services, make sure to restart Nagios to apply the configuration changes.
+
+With these definitions and associations in place, Nagios will send notifications to the specified contacts or contact groups when problems with monitored hosts and services occur.
+
+########################################
+

@@ -1,0 +1,122 @@
+To configure Nagios to monitor a Splunk server and service, and set up email notifications for various conditions, such as service status, CPU utilization, and disk space utilization, you can follow these steps:
+
+**1. Define Host and Service Configuration**:
+
+Create a host definition for the Splunk server and define service checks for service status, CPU utilization, and disk space utilization. You should have these configurations in your Nagios configuration files (e.g., `hosts.cfg` and `services.cfg`).
+
+- Define the host for the Splunk server:
+
+```cfg
+define host {
+    host_name           your_splunk_server
+    alias               Your Splunk Server
+    address             1xx.xxx.x.xxx
+    max_check_attempts  3
+    check_command       check-host-alive
+    notification_interval 60
+}
+```
+
+- Define the service checks for Splunk:
+
+```cfg
+# Service check for Splunk service status
+define service {
+    host_name           your_splunk_server
+    service_description Splunk Service
+    check_command       check_nrpe!check_splunk_service
+    use                 generic-service
+    notification_interval 60
+}
+
+# Service check for CPU utilization
+define service {
+    host_name           your_splunk_server
+    service_description CPU Utilization
+    check_command       check_nrpe!check_cpu_utilization!70!90
+    use                 generic-service
+    notification_interval 60
+}
+
+# Service check for /home/ directory space utilization
+define service {
+    host_name           your_splunk_server
+    service_description /home/ Directory Space
+    check_command       check_nrpe!check_disk_utilization!/home!70!90
+    use                 generic-service
+    notification_interval 60
+}
+```
+
+In these service definitions:
+
+- `check_nrpe` is used to execute commands on the remote Splunk server.
+- `check_splunk_service` is a custom NRPE command to check the Splunk service status.
+- `check_cpu_utilization` and `check_disk_utilization` are custom NRPE commands to check CPU and disk space utilization, respectively.
+
+**2. Define Notification Commands**:
+
+Define notification commands in your `commands.cfg` file to specify how Nagios should send email notifications when the defined thresholds are breached. Here's an example of a notification command for sending email alerts:
+
+```cfg
+define command {
+    command_name    notify-service-by-email
+    command_line    /usr/bin/printf "%b" "***** Nagios *****\n\nNotification Type: $NOTIFICATIONTYPE$\nService: $SERVICEDESC$\nHost: $HOSTALIAS$\nAddress: $HOSTADDRESS$\nState: $SERVICESTATE$\n\nDate/Time: $LONGDATETIME$\n\nAdditional Info:\n\n$SERVICEOUTPUT$\n" | /bin/mail -s "$SERVICESTATE$ Service Alert: $HOSTALIAS$/$SERVICEDESC$ is $SERVICESTATE$ **" $CONTACTEMAIL$
+}
+```
+
+**3. Set Up Contacts and Contact Groups**:
+
+Define contacts and contact groups in your `contacts.cfg` and `contactgroups.cfg` configuration files, as explained in previous responses. Assign contacts or contact groups to the service definitions to receive email notifications when issues are detected.
+
+**4. Configure Email Notifications**:
+
+Ensure that your Nagios server is correctly configured to send email notifications. Verify that email settings are correctly specified in the `contacts.cfg` or `commands.cfg` file.
+
+**5. Restart Nagios**:
+
+After configuring the host, service checks, contacts, and notification settings, restart the Nagios service to apply the changes:
+
+```bash
+sudo service nagios restart
+```
+
+With these configurations in place, Nagios will regularly monitor the Splunk server for service status, CPU utilization, and disk space utilization in the specified directory. It will send email notifications when issues are detected, such as service stops or utilization exceeding the defined thresholds. Customize the thresholds and configurations to match your specific Splunk server and monitoring requirements.
+
+
+############################
+
+The `check_splunk_service` script should be created and placed on the server where you've installed the NRPE (Nagios Remote Plugin Executor) agent. The specific directory where you should place the script may vary depending on your system and NRPE agent configuration.
+
+Here's a common location for storing custom NRPE check scripts:
+
+1. **NRPE Plugins Directory**:
+   - The `check_splunk_service` script is typically placed in the directory where NRPE plugins are stored. The location of this directory can vary but is usually something like `/usr/lib/nagios/plugins`, `/usr/local/nagios/libexec`, or similar.
+
+You can place the `check_splunk_service` script in one of these directories, and it's essential to make sure the script is executable. You can do this by running the following command:
+
+```bash
+chmod +x /path/to/check_splunk_service
+```
+
+The content of the `check_splunk_service` script should be a command that checks the status of the Splunk service on the server and returns an appropriate result code to Nagios. Here's a simple example:
+
+```bash
+#!/bin/bash
+
+# Check if the Splunk service is running
+if systemctl is-active splunk >/dev/null; then
+    echo "Splunk service is running"
+    exit 0
+else
+    echo "Splunk service is not running"
+    exit 2
+fi
+```
+
+In this example:
+
+- The script uses `systemctl` to check if the Splunk service is active. It returns an exit status of 0 (OK) if the service is running and 2 (CRITICAL) if the service is not running.
+
+Make sure to adjust the script and path to match your Splunk service configuration and your system's specifics.
+
