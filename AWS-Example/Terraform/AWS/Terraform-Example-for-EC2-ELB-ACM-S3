@@ -1,0 +1,101 @@
+Creating multiple EC2 instances with specific hostnames and tags, installing packages, configuring an Elastic Load Balancer (ELB), ACM certificates, S3 bucket, and uploading files to S3 is a complex task. I'll provide an overview of the steps and a high-level Terraform configuration outline. This is a simplified example, and you'll need to adapt it to your specific requirements.
+
+**1. EC2 Instances with Tags and Hostnames:**
+
+You can create EC2 instances with specific tags and hostnames using the `aws_instance` resource and cloud-init. Here's a simplified example:
+
+```hcl
+resource "aws_instance" "example" {
+  count         = 2
+  ami           = "ami-0c55b159cbfafe1f0" # Specify your desired AMI ID
+  instance_type = "t2.micro"
+  key_name      = aws_key_pair.example.key_name
+  user_data     = <<-EOF
+    #!/bin/bash
+    hostnamectl set-hostname my-instance-${count.index}
+    # Install your desired packages (https, idk, nginx, wget, curl)
+    yum -y install https idk nginx wget curl
+    # Additional configuration here
+    EOF
+
+  tags = {
+    Name = "example-instance-${count.index}"
+    CustomTag = "YourTagValue"
+  }
+}
+```
+
+**2. Elastic Load Balancer (ELB) and Target Groups:**
+
+You can create an ELB and target groups using the `aws_lb` and `aws_lb_target_group` resources. Here's a simplified example:
+
+```hcl
+resource "aws_lb" "example" {
+  name               = "example-elb"
+  internal           = false
+  load_balancer_type = "application"
+  # Other ELB settings
+
+  enable_deletion_protection = false
+}
+
+resource "aws_lb_target_group" "example" {
+  count = 2
+  name     = "example-target-group-${count.index}"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.example.id
+  # Other target group settings
+}
+```
+
+**3. ACM Certificate:**
+
+You can create an ACM certificate using the `aws_acm_certificate` resource:
+
+```hcl
+resource "aws_acm_certificate" "example" {
+  domain_name = "example.com"
+  validation_method = "DNS"
+  tags = {
+    Name = "example-cert"
+  }
+}
+```
+
+**4. HTTP to HTTPS Redirect:**
+
+To configure HTTP to HTTPS redirect, you can modify the ELB listener as shown in the previous response.
+
+**5. S3 Bucket and File Upload:**
+
+You can create an S3 bucket and upload files using the `aws_s3_bucket` and `aws_s3_bucket_object` resources:
+
+```hcl
+resource "aws_s3_bucket" "example" {
+  bucket = "example-bucket"
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_object" "example" {
+  bucket = aws_s3_bucket.example.id
+  key    = "subfolder/property-file.properties"
+  source = "/local/path/to/property-file.properties"
+}
+```
+
+Please note that this is a high-level overview, and you will need to create specific configurations and modules for each component. Also, AWS resources like ELB, ACM, and S3 require additional configuration steps that go beyond this simplified example.
+
+Ensure that you have set up your AWS credentials, and customize these configurations to match your specific requirements, including security, IAM roles, and network settings.
+
+
+
+############################
+
+resource "aws_acm_certificate" "tch-cert" {
+  private_key=file("private.key")
+  certificate_body = file("actual_cert.cer")
+  certificate_chain=file("inter.cer")
+  }
+
+  
