@@ -10,7 +10,7 @@ Create a host definition for the Tomcat server and define service checks for ser
 define host {
     host_name           your_tomcat_server
     alias               Your Tomcat Server
-    address             192.168.1.100
+    address             1xx.xxx.x.xxx
     max_check_attempts  3
     check_command       check-host-alive
     notification_interval 60

@@ -66,7 +66,7 @@ In your `hosts.cfg` file, associate the service checks with the host definition 
 define host {
     host_name           your_server
     alias               Your Server
-    address             192.168.1.100
+    address             xxx.xxx.x.xxx
     max_check_attempts  3
     check_command       check-host-alive
     notification_interval 60
