@@ -1,0 +1,52 @@
+---
+- name: Install and Configure Splunk Universal Forwarder
+  hosts: your_rhel_servers
+  become: yes  # To run tasks with sudo privileges
+
+  tasks:
+    - name: Copy Splunk Universal Forwarder to the server
+      copy:
+        src: /path/to/splunkforwarder-<version>-Linux-x86_64.tgz
+        dest: /tmp/splunkforwarder.tgz
+
+    - name: Extract Splunk Universal Forwarder
+      ansible.builtin.unarchive:
+        src: /tmp/splunkforwarder.tgz
+        dest: /opt
+        remote_src: yes
+        owner: <your_username>
+        group: <your_group>
+
+    - name: Configure Splunk Universal Forwarder
+      template:
+        src: splunk_outputs.conf.j2
+        dest: /opt/splunkforwarder/etc/system/local/outputs.conf
+      become: yes
+
+    - name: Start Splunk Universal Forwarder
+      command: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
+      async: 600
+      poll: 0
+      become: yes
+
+
+###########################
+The `splunk_outputs.conf.j2` file is used to define the forwarding configuration for your Splunk Universal Forwarder. You can specify where the forwarder should send data. Here's an example of what your `splunk_outputs.conf.j2` file might look like:
+
+```ini
+[tcpout]
+defaultGroup = my_indexers
+
+[tcpout:my_indexers]
+server = splunk-server1:9997, splunk-server2:9997
+```
+
+In this example:
+
+- `defaultGroup` sets the default group name for the forwarding configuration. You can use any name you like.
+
+- `[tcpout:my_indexers]` defines a group of Splunk indexers that the forwarder will send data to. You can replace `my_indexers` with your desired group name.
+
+- `server` specifies the Splunk indexer servers and their ports. You should replace `splunk-server1` and `splunk-server2` with the actual hostnames or IP addresses of your Splunk indexers, and `9997` with the port number on which your Splunk indexers are configured to listen for forwarded data.
+
+After creating your `splunk_outputs.conf.j2` file with the appropriate configuration, the Ansible playbook will use it to configure the Splunk Universal Forwarder to send data to the specified Splunk indexers.

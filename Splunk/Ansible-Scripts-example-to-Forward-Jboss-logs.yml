@@ -1,0 +1,58 @@
+You can use Ansible to automate the configuration of a Splunk Universal Forwarder to forward JBoss logs to a Splunk server. Here's an example Ansible playbook to achieve this:
+
+```yaml
+---
+- name: Configure Splunk Universal Forwarder for JBoss log forwarding
+  hosts: your_forwarder_hosts
+  tasks:
+    - name: Download and Install Splunk Universal Forwarder
+      get_url:
+        url: https://download.splunk.com/products/universalforwarder/releases/{{ splunk_version }}/linux/splunk-{{ splunk_version }}-Linux-x86_64.tgz
+        dest: /tmp/splunk.tgz
+      become: yes
+
+    - name: Extract Splunk Universal Forwarder
+      ansible.builtin.unarchive:
+        src: /tmp/splunk.tgz
+        dest: /opt
+        remote_src: yes
+      become: yes
+
+    - name: Configure Splunk Universal Forwarder
+      template:
+        src: splunk_inputs.conf.j2
+        dest: /opt/splunkforwarder/etc/system/local/inputs.conf
+      become: yes
+
+    - name: Start Splunk Universal Forwarder
+      command: /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt
+      async: 600
+      poll: 0
+      become: yes
+
+    - name: Monitor JBoss log file
+      command: /opt/splunkforwarder/bin/splunk add monitor /opt/jboss/standalone/log/server.log -sourcetype <your_sourcetype> -index <your_index_name>
+      become: yes
+
+    - name: Restart Splunk Universal Forwarder
+      command: /opt/splunkforwarder/bin/splunk restart
+      become: yes
+```
+
+Make sure to replace the following placeholders in the playbook with your specific values:
+
+- `your_forwarder_hosts`: Replace this with the hostname or IP address of the machine where you want to install the Splunk Universal Forwarder.
+- `splunk_version`: Specify the version of Splunk Universal Forwarder you want to download.
+- `<your_sourcetype>`: Replace this with the desired sourcetype for your JBoss logs.
+- `<your_index_name>`: Replace this with the name of the index where you want to store this data in Splunk.
+
+Additionally, you may need to create a Jinja2 template file `splunk_inputs.conf.j2` with the contents for the `inputs.conf` file to monitor the JBoss log. Here's an example template:
+
+```ini
+[monitor:///opt/jboss/standalone/log/server.log]
+disabled = false
+index = <your_index_name>
+sourcetype = <your_sourcetype>
+```
+
+After creating the playbook and template file, you can run the Ansible playbook with the `ansible-playbook` command to configure the Splunk Universal Forwarder on the specified hosts.
