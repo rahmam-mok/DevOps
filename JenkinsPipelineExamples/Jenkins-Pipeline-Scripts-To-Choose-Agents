@@ -1,0 +1,69 @@
+In Jenkins, you can use a Declarative or Scripted Pipeline to dynamically select an agent node based on a choice parameter. Here's an example using a Declarative Pipeline:
+
+```groovy
+pipeline {
+    agent none
+    parameters {
+        choice(name: 'NODE', choices: ['NodeA', 'NodeB', 'NodeC'], description: 'Select the agent node')
+    }
+    stages {
+        stage('Select Node') {
+            steps {
+                script {
+                    def selectedNode = params.NODE
+                    switch (selectedNode) {
+                        case 'NodeA':
+                            agent { label 'NodeA' }
+                            break
+                        case 'NodeB':
+                            agent { label 'NodeB' }
+                            break
+                        case 'NodeC':
+                            agent { label 'NodeC' }
+                            break
+                        default:
+                            error("Invalid node choice: ${selectedNode}")
+                    }
+                }
+            }
+        }
+        stage('Build') {
+            steps {
+                // Your build steps go here
+            }
+        }
+    }
+}
+```
+
+In this example, we define a choice parameter named 'NODE' with options for different agent nodes. In the 'Select Node' stage, we use a `script` block to select the agent node based on the choice parameter and set it using the `agent` directive.
+
+If you prefer a Scripted Pipeline, you can achieve the same result with the following code:
+
+```groovy
+node {
+    def selectedNode = input(
+        id: 'NODE',
+        message: 'Select the agent node',
+        parameters: [choice(name: 'NODE', choices: ['NodeA', 'NodeB', 'NodeC'])]
+    )
+
+    if (selectedNode == 'NodeA') {
+        node('NodeA') {
+            // Your build steps go here
+        }
+    } else if (selectedNode == 'NodeB') {
+        node('NodeB') {
+            // Your build steps go here
+        }
+    } else if (selectedNode == 'NodeC') {
+        node('NodeC') {
+            // Your build steps go here
+        }
+    } else {
+        error("Invalid node choice: ${selectedNode}")
+    }
+}
+```
+
+In this Scripted Pipeline, we use the `input` step to prompt the user to select the agent node and then use a series of conditional statements to choose the appropriate agent node for the build.
