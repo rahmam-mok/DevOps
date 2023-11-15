@@ -1,0 +1,87 @@
+To spin up a Red Hat server on Azure using Terraform with an SSH key, you need to modify the Terraform configuration to use SSH authentication. Here's an example:
+
+1. **Install Terraform:**
+   Ensure that you have Terraform installed on your machine.
+
+2. **Azure Authentication:**
+   Set up Azure authentication using the Azure CLI or environment variables.
+
+3. **Create Terraform Configuration:**
+   Create a Terraform configuration file, e.g., `main.tf`, with the following content:
+
+```hcl
+provider "azurerm" {
+  features = {}
+}
+
+resource "azurerm_resource_group" "example" {
+  name     = "example-resource-group"
+  location = "East US"
+}
+
+resource "azurerm_linux_virtual_machine" "example" {
+  name                  = "example-vm"
+  resource_group_name   = azurerm_resource_group.example.name
+  location              = azurerm_resource_group.example.location
+  size                  = "Standard_DS1_v2"
+  admin_username        = "adminuser"
+  disable_password_authentication = true
+
+  admin_ssh_key {
+    username   = "adminuser"
+    public_key = file("~/.ssh/id_rsa.pub")  # Replace with the path to your public key
+  }
+
+  network_interface_ids = [azurerm_network_interface.example.id]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "RedHat"
+    offer     = "rhel"
+    sku       = "8_2"
+    version   = "latest"
+  }
+
+  computer_name = "hostname"
+}
+
+resource "azurerm_network_interface" "example" {
+  name                = "example-nic"
+  resource_group_name = azurerm_resource_group.example.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.example.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+
+resource "azurerm_subnet" "example" {
+  name                 = "example-subnet"
+  resource_group_name  = azurerm_resource_group.example.name
+  virtual_network_name = azurerm_virtual_network.example.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+resource "azurerm_virtual_network" "example" {
+  name                = "example-vnet"
+  resource_group_name = azurerm_resource_group.example.name
+  address_space       = ["10.0.0.0/16"]
+}
+```
+
+4. **Run Terraform Commands:**
+   Navigate to the directory containing your Terraform configuration file and run:
+
+   ```bash
+   terraform init
+   terraform apply
+   ```
+
+   Follow the prompts to confirm the changes.
+
+Ensure that the path to your SSH public key (`id_rsa.pub`) is correctly specified in the `admin_ssh_key` block. This example assumes that your SSH key is in the default location. Adjust the paths and configuration based on your specific setup.
