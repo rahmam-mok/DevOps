@@ -1,0 +1,43 @@
+To set up CloudWatch alerts for SSL certificate expiration for certificates imported into AWS Certificate Manager (ACM) using Terraform, you can follow these steps. Before implementing this, make sure you have the necessary IAM permissions for ACM and CloudWatch.
+
+1. First, create a new AWS CloudWatch alarm resource in your Terraform configuration. You can use the `aws_cloudwatch_metric_alarm` resource to define the alarm. Below is an example of a Terraform configuration to create an alarm for SSL certificate expiration:
+
+```hcl
+resource "aws_cloudwatch_metric_alarm" "ssl_certificate_expiration" {
+  alarm_name          = "SSL_Certificate_Expiration_Alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods = "1"
+  metric_name         = "CertificateExpirationInDays"
+  namespace           = "AWS/ACM"
+  period              = "3600"
+  statistic           = "Minimum"
+  threshold           = "30" # Set this to the number of days before expiration to trigger the alarm
+  alarm_description   = "SSL Certificate will expire within 30 days."
+  alarm_action {
+    type              = "arn"
+    target_arn        = "arn:aws:sns:us-east-1:123456789012:YourSNSTopic" # Replace with your SNS topic ARN
+  }
+  dimensions = {
+    CertificateArn = aws_acm_certificate.example.arn
+  }
+}
+
+resource "aws_acm_certificate" "example" {
+  domain_name       = "example.com"
+  subject_alternative_names = ["www.example.com"]
+  validation_method = "DNS"
+  tags = {
+    Name = "Example Certificate"
+  }
+}
+```
+
+In this example, we're creating a CloudWatch alarm that monitors the `CertificateExpirationInDays` metric from ACM. It will trigger when the certificate's expiration date is 30 days or less in the future. Adjust the `threshold` value as needed.
+
+2. Replace the `domain_name` and `subject_alternative_names` in the `aws_acm_certificate` resource with the names of your SSL certificate.
+
+3. You'll also need to specify the `target_arn` in the `alarm_action` block with the ARN of an SNS topic. This SNS topic is where the alarm will send notifications when triggered.
+
+4. After defining these resources in your Terraform configuration, run `terraform init` and `terraform apply` to create the CloudWatch alarm.
+
+This configuration will create a CloudWatch alarm that monitors the expiration of your SSL certificate and sends a notification when it's about to expire. You can adjust the threshold and other parameters to suit your needs.
