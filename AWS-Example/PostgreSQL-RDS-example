@@ -1,0 +1,67 @@
+ In this Terraform script, I assume you have existing VPC, subnet, and security group with specific names (pftc-vpc, pftc-subnet, and pftc-security-group, respectively). Please replace these names with your actual resource names.
+
+```hcl
+provider "aws" {
+  region = "us-east-1"  # Change this to your AWS region
+}
+
+# Assuming you have an existing VPC named "pftc-vpc"
+data "aws_vpcs" "existing_vpcs" {
+  tags = {
+    Name = "pftc-vpc"
+  }
+}
+
+# Assuming you have an existing subnet named "pftc-subnet"
+data "aws_subnet_ids" "existing_subnets" {
+  vpc_id = data.aws_vpcs.existing_vpcs.ids[0]
+
+  tags = {
+    Name = "pftc-subnet"
+  }
+}
+
+# Assuming you have an existing security group named "pftc-security-group"
+data "aws_security_group" "existing_security_group" {
+  name = "pftc-security-group"
+}
+
+resource "aws_db_instance" "example" {
+  identifier             = "pftc-dev-postgresql"
+  allocated_storage      = 20
+  storage_type           = "gp2"
+  engine                 = "postgres"
+  engine_version         = "13.4"
+  instance_class         = "db.t2.micro"
+  name                   = "pftc-dev-db-instance"
+  username               = "admin"
+  password               = "YourPassword"  # Change this to a secure password
+  db_subnet_group_name   = "default"  # Use default if not using a custom subnet group
+  vpc_security_group_ids = [data.aws_security_group.existing_security_group.id]
+
+  publicly_accessible   = true  # Set to false if the RDS instance should not be publicly accessible
+
+  subnet_ids = data.aws_subnet_ids.existing_subnets.ids
+
+  # Uncomment the following block to specify a different DB parameter group
+  # db_parameter_group_name = "your-db-parameter-group"
+
+  tags = {
+    Name        = "pftc-dev-postgresql"
+    Environment = "development"
+  }
+}
+
+output "rds_endpoint" {
+  value = aws_db_instance.example.endpoint
+}
+```
+
+This script references your existing VPC, subnet, and security group based on their tags. Replace placeholder values like `YourPassword` with actual secure values. After creating the Terraform script, run the usual Terraform commands:
+
+```bash
+terraform init
+terraform apply
+```
+
+Review the plan and type "yes" to confirm the creation of resources. Once the deployment is complete, Terraform will display the RDS endpoint.
