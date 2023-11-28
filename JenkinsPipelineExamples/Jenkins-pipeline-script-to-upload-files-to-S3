@@ -1,0 +1,34 @@
+pipeline {
+    agent any
+
+    environment {
+        VAULT_ADDR         = 'your-vault-address'
+        VAULT_TOKEN        = credentials('VAULT_TOKEN')
+        AWS_ACCESS_KEY_ID  = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        AWS_DEFAULT_REGION = 'your-region'
+        S3_BUCKET          = 'your-s3-bucket'
+        S3_KEY             = 'path/in/s3/dev.properties'
+    }
+
+    stages {
+        stage('Retrieve from Vault') {
+            steps {
+                script {
+                    withVault(credentialsId: 'VAULT_TOKEN', vaultUrl: "${VAULT_ADDR}") {
+                        def secret = vault.read('path/to/dev.properties')
+                        writeFile file: 'dev.properties', text: secret.getData()['data']['content']
+                    }
+                }
+            }
+        }
+
+        stage('Upload to S3') {
+            steps {
+                script {
+                    sh "aws s3 cp dev.properties s3://${S3_BUCKET}/${S3_KEY} --region ${AWS_DEFAULT_REGION}"
+                }
+            }
+        }
+    }
+}
