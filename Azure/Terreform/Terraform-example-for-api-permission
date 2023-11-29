@@ -1,0 +1,74 @@
+It's not practical to include all Microsoft Graph permissions in a single script, as there are numerous permissions covering various aspects of Microsoft 365 services. However, I can provide you with a basic template that you can modify based on your application's specific needs. Additionally, including all permissions might not be a good practice due to security and privacy considerations. Always follow the principle of least privilege.
+
+```hcl
+provider "azurerm" {
+  features = {}
+}
+
+# Create Azure AD Application
+resource "azuread_application" "example" {
+  name                       = "your-app-name"
+  homepage                   = "http://your-app-homepage"
+  identifier_uris            = ["http://your-app-identifier"]
+  reply_urls                 = ["http://your-app-reply-url"]
+}
+
+# Create Service Principal
+resource "azuread_service_principal" "example" {
+  application_id = azuread_application.example.application_id
+}
+
+# Create Service Principal Password
+resource "azuread_service_principal_password" "example" {
+  service_principal_id = azuread_service_principal.example.id
+  value                = "your-password"
+  end_date             = "2099-01-01T01:02:03Z"
+}
+
+# Define all Microsoft Graph API permissions (example subset)
+variable "graph_permissions" {
+  default = [
+    "User.Read",
+    "Mail.Read",
+    # Add more permissions as needed
+  ]
+}
+
+# Assign Microsoft Graph API permissions
+resource "azuread_application_api_permission" "example" {
+  for_each = toset(var.graph_permissions)
+  
+  application_id = azuread_application.example.application_id
+  api_permissions = [
+    {
+      api        = "00000003-0000-0000-c000-000000000000"  # Microsoft Graph
+      permission = each.value
+    },
+  ]
+}
+
+# Define redirect URIs
+variable "redirect_uris" {
+  default = [
+    "http://your-redirect-uri-1",
+    "http://your-redirect-uri-2",
+    # Add more redirect URIs as needed
+  ]
+}
+
+# Set redirect URIs for the application
+resource "azuread_application" "example" {
+  for_each     = toset(var.redirect_uris)
+  application_id = azuread_application.example[each.key].application_id
+  reply_urls     = [each.value]
+}
+
+# Optionally, assign the required role to the service principal
+resource "azurerm_role_assignment" "example" {
+  principal_id         = azuread_service_principal.example.id
+  role_definition_name = "Contributor"  # Replace with the desired role
+  scope                = "/subscriptions/your-subscription-id"
+}
+```
+
+Replace placeholder values like `"your-app-name"`, `"your-app-homepage"`, and others with your actual values. Adjust the permissions and redirect URIs based on your application's requirements.
