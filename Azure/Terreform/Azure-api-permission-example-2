@@ -1,0 +1,76 @@
+Here's a Terraform script example that includes permissions for Azure Service Management API, Azure Key Vault API, and Microsoft Graph API. Additionally, I'll provide references for API permissions.
+
+```hcl
+provider "azurerm" {
+  features = {}
+}
+
+# Create Azure AD Application
+resource "azuread_application" "example" {
+  name                       = "your-app-name"
+  homepage                   = "http://your-app-homepage"
+  identifier_uris            = ["http://your-app-identifier"]
+  reply_urls                 = ["http://your-app-reply-url"]
+}
+
+# Create Service Principal
+resource "azuread_service_principal" "example" {
+  application_id = azuread_application.example.application_id
+}
+
+# Create Service Principal Password
+resource "azuread_service_principal_password" "example" {
+  service_principal_id = azuread_service_principal.example.id
+  value                = "your-password"
+  end_date             = "2099-01-01T01:02:03Z"
+}
+
+# Assign Azure Service Management API permissions
+resource "azuread_application_api_permission" "service_management" {
+  application_id = azuread_application.example.application_id
+  api_permissions = [
+    {
+      api        = "797f4846-ba00-4fd7-ba43-dac1f8f63013"  # Azure Service Management API
+      permission = "user_impersonation"
+    },
+  ]
+}
+
+# Assign Azure Key Vault API permissions
+resource "azuread_application_api_permission" "key_vault" {
+  application_id = azuread_application.example.application_id
+  api_permissions = [
+    {
+      api        = "https://vault.azure.net"  # Azure Key Vault API
+      permission = "user_impersonation"
+    },
+  ]
+}
+
+# Assign Microsoft Graph API permissions
+resource "azuread_application_api_permission" "graph" {
+  application_id = azuread_application.example.application_id
+  api_permissions = [
+    {
+      api        = "00000003-0000-0000-c000-000000000000"  # Microsoft Graph
+      permission = "User.Read"
+    },
+  ]
+}
+
+# Optionally, assign the required role to the service principal
+resource "azurerm_role_assignment" "example" {
+  principal_id         = azuread_service_principal.example.id
+  role_definition_name = "Contributor"  # Replace with the desired role
+  scope                = "/subscriptions/your-subscription-id"
+}
+```
+
+Replace placeholder values like `"your-app-name"`, `"your-app-homepage"`, and others with your actual values. Adjust the permissions based on your application's requirements.
+
+### References:
+1. Azure Service Management API: [Azure Service Management REST API](https://docs.microsoft.com/en-us/rest/api/azure/)
+2. Azure Key Vault API: [Azure Key Vault REST API Reference](https://docs.microsoft.com/en-us/rest/api/keyvault/)
+3. Microsoft Graph API Permissions: [Microsoft Graph Permissions Reference](https://docs.microsoft.com/en-us/graph/permissions-reference)
+
+Always check the latest documentation for the most accurate and up-to-date information.
