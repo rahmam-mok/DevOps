@@ -1,0 +1,41 @@
+provider "azurerm" {
+  features = {}
+}
+
+resource "azurerm_application" "example" {
+  name                       = "your-app-name"
+  application_type           = "spa"
+  # other required properties...
+
+  # Redirect URIs
+  reply_urls = ["https://your-app-uri1", "https://your-app-uri2"]
+
+  # Optional: Add app roles within the manifest block
+  manifest = jsonencode({
+    appRoles = [
+      {
+        allowedMemberTypes = ["User"],
+        description        = "Role 1 description",
+        displayName        = "Role 1",
+        id                 = "1",
+        isEnabled          = true,
+        value              = "Role1",
+      },
+      {
+        allowedMemberTypes = ["User"],
+        description        = "Role 2 description",
+        displayName        = "Role 2",
+        id                 = "2",
+        isEnabled          = true,
+        value              = "Role2",
+      },
+      # Add two more roles following the same structure
+    ],
+  })
+}
+
+resource "azurerm_application_password" "example" {
+  application_id = azurerm_application.example.application_id
+}
+
+# Optional: Assign these roles to users, groups, or service principals using azurerm_role_assignment
