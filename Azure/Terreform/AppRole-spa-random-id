@@ -1,0 +1,73 @@
+provider "azurerm" {
+  features = {}
+}
+
+resource "random_id" "app" {
+  byte_length = 8
+}
+
+resource "azurerm_ad_application" "pftt" {
+  name                       = "pftt-${random_id.app.hex}"
+  application_type           = "spa"
+  # other required properties...
+
+  # Redirect URIs
+  reply_urls = ["https://your-app-uri1", "https://your-app-uri2"]
+
+  # Optional: Add app roles with random IDs within the manifest block
+  manifest = jsonencode({
+    appRoles = [
+      {
+        allowedMemberTypes = ["User"],
+        description        = "Role 1 description",
+        displayName        = "Role 1",
+        id                 = random_id.role1.hex,
+        isEnabled          = true,
+        value              = "Role1",
+      },
+      {
+        allowedMemberTypes = ["User"],
+        description        = "Role 2 description",
+        displayName        = "Role 2",
+        id                 = random_id.role2.hex,
+        isEnabled          = true,
+        value              = "Role2",
+      },
+      # Add two more roles following the same structure
+    ],
+  })
+}
+
+resource "azurerm_ad_service_principal" "pftc" {
+  application_id = azurerm_ad_application.pftt.application_id
+}
+
+resource "azurerm_ad_service_principal_password" "pftc" {
+  service_principal_id = azurerm_ad_service_principal.pftc.id
+  value               = random_password.password.result
+  end_date            = "2025-01-01T01:02:03Z"  # Set your desired end date
+}
+
+# Optional: Assign these roles to users, groups, or service principals using azurerm_role_assignment
+
+# Add Microsoft Graph permissions
+resource "azurerm_ad_application" "graph_permissions" {
+  name                       = "graph_permissions"
+  # other required properties...
+
+  # Required permissions to Microsoft Graph
+  required_resource_access {
+    resource_app_id = "00000003-0000-0000-c000-000000000000" # Microsoft Graph App ID
+    resource_access {
+      id   = "<Permission ID>"
+      type = "Scope"
+    }
+    # Add more permissions as needed
+  }
+}
+
+resource "random_password" "password" {
+  length           = 32
+  special          = true
+  override_special = "_%@"
+}
