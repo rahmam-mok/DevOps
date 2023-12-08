@@ -1,0 +1,73 @@
+Below is an example of how you can use Terraform to create a service principal, register an application, add four different app roles, choose "Single Page Application" as the platform, add redirect URIs, add secrets, and add Microsoft Graph permissions:
+
+```hcl
+provider "azurerm" {
+  features = {}
+}
+
+resource "azurerm_ad_application" "pftt" {
+  name                       = "pftt"
+  application_type           = "spa"
+  # other required properties...
+
+  # Redirect URIs
+  reply_urls = ["https://your-app-uri1", "https://your-app-uri2"]
+
+  # Optional: Add app roles within the manifest block
+  manifest = jsonencode({
+    appRoles = [
+      {
+        allowedMemberTypes = ["User"],
+        description        = "Role 1 description",
+        displayName        = "Role 1",
+        id                 = "1",
+        isEnabled          = true,
+        value              = "Role1",
+      },
+      {
+        allowedMemberTypes = ["User"],
+        description        = "Role 2 description",
+        displayName        = "Role 2",
+        id                 = "2",
+        isEnabled          = true,
+        value              = "Role2",
+      },
+      # Add two more roles following the same structure
+    ],
+  })
+}
+
+resource "azurerm_ad_service_principal" "pftc" {
+  application_id = azurerm_ad_application.pftt.application_id
+}
+
+resource "azurerm_ad_service_principal_password" "pftc" {
+  service_principal_id = azurerm_ad_service_principal.pftc.id
+  value               = "your-secret-password"
+  end_date            = "2025-01-01T01:02:03Z"  # Set your desired end date
+}
+
+# Optional: Assign these roles to users, groups, or service principals using azurerm_role_assignment
+
+# Add Microsoft Graph permissions
+resource "azurerm_ad_application" "graph_permissions" {
+  name                       = "graph_permissions"
+  # other required properties...
+
+  # Required permissions to Microsoft Graph
+  required_resource_access {
+    resource_app_id = "00000003-0000-0000-c000-000000000000" # Microsoft Graph App ID
+    resource_access {
+      id   = "<Permission ID>"
+      type = "Scope"
+    }
+    # Add more permissions as needed
+  }
+}
+```
+
+Replace `"https://your-app-uri1"` and `"https://your-app-uri2"` with your actual redirect URIs. Adjust other parameters, such as permissions and role details, based on your specific use case.
+
+Note: You need to replace `"<Permission ID>"` with the actual permission ID from Microsoft Graph. Refer to Microsoft Graph documentation or use the Azure portal to find the correct IDs for the permissions you need.
+
+Refer to the Terraform AzureRM provider documentation and Azure AD app registration documentation for more details.
