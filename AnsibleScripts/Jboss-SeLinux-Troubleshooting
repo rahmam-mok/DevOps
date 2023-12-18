@@ -1,0 +1,34 @@
+To check if SELinux is blocking JBoss EAP from creating the PID file, you can follow these steps:
+
+1. Check SELinux status:
+   ```
+   sestatus
+   ```
+
+   Ensure that SELinux is either in "Enforcing" or "Permissive" mode. If it's in "Disabled" mode, SELinux is not active.
+
+2. Review SELinux audit logs:
+   ```
+   ausearch -c 'jboss-eap' --raw | audit2allow -M my-jboss-eap
+   semodule -i my-jboss-eap.pp
+   ```
+
+   These commands will help you generate and load a SELinux policy module based on the audit logs related to JBoss EAP. If SELinux is blocking certain actions, this should provide more information.
+
+For AppArmor, follow these steps:
+
+1. Check AppArmor status:
+   ```
+   sudo apparmor_status
+   ```
+
+   Ensure that AppArmor is either in "enforce" or "complain" mode. If it's in "disabled" mode, AppArmor is not active.
+
+2. Review AppArmor logs:
+   ```
+   dmesg | grep audit
+   ```
+
+   Look for any audit messages related to JBoss EAP. These messages can provide details on AppArmor denials.
+
+By examining SELinux or AppArmor status and logs, you should be able to determine if these security modules are blocking JBoss EAP from creating the PID file. Adjustments to the SELinux or AppArmor policies may be necessary to allow the required actions.
