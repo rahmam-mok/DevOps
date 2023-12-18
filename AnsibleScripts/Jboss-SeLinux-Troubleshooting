@@ -1,3 +1,38 @@
+To ensure SELinux is not blocking JBoss EAP from creating the PID file, follow these steps:
+
+1. **Check SELinux Status:**
+   ```
+   sestatus
+   ```
+   Ensure SELinux is in "Enforcing" or "Permissive" mode. If it's in "Disabled" mode, SELinux is not active.
+
+2. **Review SELinux Audit Logs:**
+   ```
+   sudo cat /var/log/audit/audit.log | grep jboss-eap | grep denied
+   ```
+   Look for denials related to JBoss EAP. If you find entries, they will indicate what SELinux is blocking.
+
+3. **Adjust SELinux Context or Create a Policy Module:**
+   - If SELinux is blocking, you may need to adjust the SELinux context of the directory or files involved. For example, you can use the `chcon` command:
+     ```
+     sudo chcon -R -t httpd_sys_content_t /var/run/jboss-eap/
+     ```
+   - If the above doesn't resolve the issue, consider creating a custom SELinux policy module:
+     ```
+     sudo audit2allow -a -M my-jboss-eap
+     sudo semodule -i my-jboss-eap.pp
+     ```
+   This will generate and load a custom SELinux policy module based on the audit logs.
+
+4. **Retest:**
+   After making changes, restart JBoss EAP and check if it can create the PID file without issues.
+
+Always exercise caution when modifying SELinux settings, and understand the security implications of any changes made.
+
+
+
+
+
 To check if SELinux is blocking JBoss EAP from creating the PID file, you can follow these steps:
 
 1. Check SELinux status:
