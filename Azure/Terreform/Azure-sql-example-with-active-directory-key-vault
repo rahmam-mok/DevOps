@@ -1,0 +1,94 @@
+To integrate Azure Key Vault and enable Active Directory authentication in your Terraform scripts for Azure SQL Server, you'll need to utilize the `azurerm_key_vault_secret` and `azurerm_sql_server_active_directory_administrator` resources. Here's an example:
+
+```hcl
+provider "azurerm" {
+  features = {}
+}
+
+resource "azurerm_resource_group" "example" {
+  name     = "example-rg"
+  location = "East US"
+}
+
+resource "azurerm_key_vault" "example" {
+  name                        = "example-keyvault"
+  resource_group_name         = azurerm_resource_group.example.name
+  location                    = azurerm_resource_group.example.location
+  enabled_for_disk_encryption = true
+  enabled_for_deployment      = true
+  enabled_for_template_deployment = true
+}
+
+resource "azurerm_key_vault_secret" "sql_credentials" {
+  name         = "sql-credentials"
+  value        = jsonencode({
+    username = "your_key_vault_username_secret_name",
+    password = "your_key_vault_password_secret_name",
+  })
+  key_vault_id = azurerm_key_vault.example.id
+}
+
+resource "azurerm_sql_server" "example" {
+  name                         = "example-sql-server"
+  resource_group_name          = azurerm_resource_group.example.name
+  location                     = azurerm_resource_group.example.location
+  version                      = "12.0"
+
+  administrator_login          = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.sql_credentials.id})"
+  administrator_login_password = null  # Password is managed by Key Vault
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  tags = {
+    environment = "dev"
+  }
+}
+
+resource "azurerm_sql_database" "example" {
+  name                = "example-db"
+  resource_group_name = azurerm_resource_group.example.name
+  server_name         = azurerm_sql_server.example.name
+  edition             = "Standard"
+  collation           = "SQL_Latin1_General_CP1_CI_AS"
+  max_size_gb         = 1
+  create_mode         = "Default"
+}
+
+resource "azurerm_sql_failover_group" "example" {
+  name                = "example-failover-group"
+  resource_group_name = azurerm_resource_group.example.name
+  server_name         = azurerm_sql_server.example.name
+  partner_server      = azurerm_sql_server.example_secondary[0].name
+
+  readable_secondary_replica_connection_strings = [
+    azurerm_sql_server.example_secondary[0].fully_qualified_domain_name,
+  ]
+
+  databases {
+    name = azurerm_sql_database.example.name
+  }
+}
+
+resource "azurerm_sql_server" "example_secondary" {
+  name                         = "example-secondary"
+  resource_group_name          = azurerm_resource_group.example.name
+  location                     = "West US"
+  version                      = "12.0"
+  administrator_login          = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.sql_credentials.id})"
+  administrator_login_password = null  # Password is managed by Key Vault
+
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+resource "azurerm_sql_server_active_directory_administrator" "example" {
+  server_name         = azurerm_sql_server.example.name
+  resource_group_name = azurerm_resource_group.example.name
+  object_id           = azurerm_sql_server.example.identity[0].principal_id
+}
+```
+
+In this script, the username and password for the SQL Server are stored as secrets in Azure Key Vault. The SQL Server administrator login is set to use Key Vault references. Additionally, Active Directory authentication is enabled by creating a system-assigned managed identity for the SQL Server and creating an Active Directory administrator. Adjust the names and configurations as per your requirements. Ensure that the necessary permissions are granted for the managed identity in Key Vault and Active Directory.
