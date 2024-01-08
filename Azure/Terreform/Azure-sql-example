@@ -1,0 +1,63 @@
+Creating Terraform scripts for Azure SQL Server with failover group involves several steps. Here's a simplified example to get you started. Please note that you may need to adjust it based on your specific requirements and environment.
+
+```hcl
+provider "azurerm" {
+  features = {}
+}
+
+resource "azurerm_resource_group" "example" {
+  name     = "example-rg"
+  location = "East US"
+}
+
+resource "azurerm_sql_server" "example" {
+  name                         = "example-sql-server"
+  resource_group_name          = azurerm_resource_group.example.name
+  location                     = azurerm_resource_group.example.location
+  version                      = "12.0"
+  administrator_login          = "yoursqladminname"
+  administrator_login_password = "yourpassword"
+
+  tags = {
+    environment = "dev"
+  }
+}
+
+resource "azurerm_sql_database" "example" {
+  name                = "example-db"
+  resource_group_name = azurerm_resource_group.example.name
+  server_name         = azurerm_sql_server.example.name
+  edition             = "Standard"
+  collation           = "SQL_Latin1_General_CP1_CI_AS"
+  max_size_gb         = 1
+  create_mode         = "Default"
+}
+
+resource "azurerm_sql_failover_group" "example" {
+  name                = "example-failover-group"
+  resource_group_name = azurerm_resource_group.example.name
+  server_name         = azurerm_sql_server.example.name
+  partner_server      = azurerm_sql_server.example.secondary[0].name
+
+  readable_secondary_replica_connection_strings = [
+    azurerm_sql_server.example.secondary[0].fully_qualified_domain_name,
+  ]
+
+  databases {
+    name = azurerm_sql_database.example.name
+  }
+}
+
+resource "azurerm_sql_server" "example_secondary" {
+  name                         = "example-secondary"
+  resource_group_name          = azurerm_resource_group.example.name
+  location                     = "West US"
+  version                      = "12.0"
+  administrator_login          = "yoursqladminname"
+  administrator_login_password = "yourpassword"
+
+  replica_type = "Secondary"
+}
+```
+
+This example creates an Azure SQL Server, a primary database, a secondary server, and configures a failover group between them. Adjust names, passwords, and configurations according to your needs. Ensure that you have the required Azure credentials and permissions to create these resources.
