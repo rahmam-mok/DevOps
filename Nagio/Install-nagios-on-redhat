@@ -1,0 +1,74 @@
+To install Nagios on Red Hat, you can follow these general steps:
+
+1. **Update System:**
+   Ensure your system is up-to-date by running:
+   ```bash
+   sudo yum update
+   ```
+
+2. **Install Dependencies:**
+   Nagios has several dependencies. Install them using:
+   ```bash
+   sudo yum install httpd php gcc glibc glibc-common gd gd-devel make net-snmp
+   ```
+
+3. **Download Nagios Core:**
+   Visit the Nagios Core official website, download the latest version, and extract it:
+   ```bash
+   wget https://github.com/NagiosEnterprises/nagioscore/archive/nagios-X.X.X.tar.gz
+   tar -zxvf nagios-X.X.X.tar.gz
+   ```
+
+4. **Compile and Install Nagios:**
+   Change to the extracted directory, configure, compile, and install Nagios:
+   ```bash
+   cd nagioscore-nagios-X.X.X
+   ./configure --with-httpd-conf=/etc/httpd/conf.d
+   make all
+   sudo make install
+   ```
+
+5. **Create Nagios User and Group:**
+   Create a Nagios user and group:
+   ```bash
+   sudo useradd nagios
+   sudo groupadd nagcmd
+   sudo usermod -a -G nagcmd nagios
+   sudo usermod -a -G nagcmd apache
+   ```
+
+6. **Set Permissions:**
+   Set appropriate permissions:
+   ```bash
+   sudo make install-init
+   sudo make install-commandmode
+   sudo make install-config
+   sudo make install-webconf
+   ```
+
+7. **Configure Apache:**
+   Configure Apache for Nagios:
+   ```bash
+   sudo htpasswd -c /etc/nagios/passwd nagiosadmin
+   ```
+
+8. **Start Services:**
+   Start Apache and Nagios services:
+   ```bash
+   sudo systemctl start httpd
+   sudo systemctl start nagios
+   ```
+
+9. **Enable Services:**
+   Enable Apache and Nagios to start on boot:
+   ```bash
+   sudo systemctl enable httpd
+   sudo systemctl enable nagios
+   ```
+
+10. **Access Nagios:**
+    Open a web browser and access Nagios using your server's IP or domain, e.g., `http://your_server_ip/nagios`.
+
+Note: Replace "X.X.X" in the commands with the actual version number you downloaded.
+
+Ensure you refer to the official Nagios documentation for any changes or updates specific to the version you're installing.
