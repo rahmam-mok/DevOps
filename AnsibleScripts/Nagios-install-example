@@ -1,0 +1,73 @@
+---
+- name: Install and configure Nagios
+  hosts: your_redhat_server
+  become: true
+
+  tasks:
+    - name: Install dependencies
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - httpd
+        - php
+        - gcc
+        - glibc
+        - glibc-common
+        - gd
+        - gd-devel
+        - make
+        - net-snmp
+
+    - name: Download and extract Nagios Core
+      get_url:
+        url: "https://github.com/NagiosEnterprises/nagioscore/archive/nagios-X.X.X.tar.gz"
+        dest: "/tmp/nagios-X.X.X.tar.gz"
+
+    - name: Extract Nagios Core
+      ansible.builtin.unarchive:
+        src: "/tmp/nagios-X.X.X.tar.gz"
+        dest: "/tmp/"
+
+    - name: Compile and install Nagios
+      command: "chdir=/tmp/nagioscore-nagios-X.X.X/ ./configure --with-httpd-conf=/etc/httpd/conf.d && make all && make install"
+      args:
+        executable: /bin/bash
+
+    - name: Create Nagios user and group
+      user:
+        name: nagios
+      become_user: root
+
+    - name: Create nagcmd group
+      group:
+        name: nagcmd
+      become_user: root
+
+    - name: Add users to nagcmd group
+      user:
+        name: "{{ item }}"
+        groups: nagcmd
+      loop:
+        - nagios
+        - apache
+      become_user: root
+
+    - name: Set permissions
+      command: "chdir=/tmp/nagioscore-nagios-X.X.X/ make install-init && make install-commandmode && make install-config && make install-webconf"
+      args:
+        executable: /bin/bash
+
+    - name: Set up Apache password
+      shell: "htpasswd -bc /etc/nagios/passwd nagiosadmin your_password"
+      args:
+        executable: /bin/bash
+
+    - name: Start and enable services
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - httpd
+        - nagios
