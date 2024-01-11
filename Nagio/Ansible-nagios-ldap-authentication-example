@@ -1,0 +1,58 @@
+Certainly! To enable Active Directory authentication for Nagios on Red Hat 8, you can extend the previous playbook with additional tasks to configure Apache and Nagios for LDAP authentication. Here's an updated version:
+
+```yaml
+---
+- name: Install Nagios on Red Hat 8 with AD Authentication
+  hosts: your_target_host
+  become: true
+
+  tasks:
+    # ... (Previous tasks for installing required packages, downloading, and installing Nagios)
+
+    - name: Install required packages for AD authentication
+      dnf:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - openldap-clients
+        - nss-pam-ldapd
+        - perl-LDAP
+
+    - name: Configure LDAP authentication for Apache
+      template:
+        src: templates/httpd_nagios_ldap.conf.j2
+        dest: /etc/httpd/conf.d/nagios_ldap.conf
+      notify:
+        - Restart Apache
+
+    - name: Configure Nagios for LDAP authentication
+      lineinfile:
+        path: /usr/local/nagios/etc/cgi.cfg
+        line: "use_authentication=1"
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
+```
+
+Create a new template file named `httpd_nagios_ldap.conf.j2` with the following content:
+
+```apache
+<Directory "/usr/local/nagios/sbin">
+  AuthType Basic
+  AuthName "LDAP Authentication"
+  AuthBasicProvider ldap
+  AuthLDAPURL "ldap://your_ad_server:389/ou=Users,dc=example,dc=com?uid"
+  AuthLDAPBindDN "cn=nagios,ou=Users,dc=example,dc=com"
+  AuthLDAPBindPassword "your_nagios_ldap_password"
+  Require valid-user
+</Directory>
+```
+
+Replace placeholders such as `your_ad_server`, `dc=example,dc=com`, and `your_nagios_ldap_password` with your actual Active Directory server details and Nagios LDAP credentials.
+
+This playbook adds tasks to install required packages for LDAP authentication, configure Apache for LDAP, and update Nagios settings for authentication. Customize the LDAP parameters in the template according to your Active Directory setup. After running this playbook, Nagios should be configured with Active Directory authentication.
