@@ -1,0 +1,47 @@
+---
+- name: Install Nagios on Red Hat 8
+  hosts: your_target_host
+  become: true
+
+  tasks:
+    - name: Install required packages
+      dnf:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - httpd
+        - php
+        - php-cli
+        - gcc
+        - glibc
+        - glibc-common
+        - gd
+        - gd-devel
+        - make
+        - net-snmp
+        - openssl-devel
+        - xinetd
+        - unzip
+
+    - name: Download Nagios Core
+      get_url:
+        url: "https://github.com/NagiosEnterprises/nagioscore/archive/nagios-4.4.6.tar.gz"
+        dest: "/tmp/nagioscore.tar.gz"
+
+    - name: Extract Nagios Core
+      ansible.builtin.unarchive:
+        src: "/tmp/nagioscore.tar.gz"
+        dest: "/tmp/"
+
+    - name: Compile and Install Nagios Core
+      command: "make all"
+      args:
+        chdir: "/tmp/nagioscore-nagios-4.4.6/"
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
