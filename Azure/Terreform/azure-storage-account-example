@@ -1,0 +1,33 @@
+Below is an example Terraform script to create an Azure Storage Account with geo-redundancy:
+
+hcl
+Copy code
+provider "azurerm" {
+  features = {}
+}
+
+resource "azurerm_resource_group" "storage_rg" {
+  name     = "your-storage-resource-group"
+  location = "your-location"
+}
+
+resource "azurerm_storage_account" "storage_account" {
+  name                     = "yourstorageaccountname"
+  resource_group_name      = azurerm_resource_group.storage_rg.name
+  location                 = azurerm_resource_group.storage_rg.location
+  account_tier             = "Standard"  # Standard or Premium
+  account_replication_type = "GRS"       # GRS (geo-redundant storage) or LRS (locally redundant storage)
+
+  tags = {
+    environment = "production"
+  }
+}
+
+output "storage_account_key" {
+  value = azurerm_storage_account.storage_account.primary_access_key
+}
+Replace the placeholders (your-storage-resource-group, your-location, yourstorageaccountname, etc.) with your actual values.
+
+This script creates an Azure Storage Account in a specified resource group and location. The account_replication_type is set to "GRS" for geo-redundant storage, meaning your data will be replicated to a secondary region for additional resilience.
+
+Make sure to customize the script according to your specific requirements and configurations. After running the script, you can use the output variable storage_account_key to retrieve the primary access key of the created storage account if needed.
