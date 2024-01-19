@@ -1,0 +1,62 @@
+Below is an example Terraform script that reads the username and password from an existing Azure Key Vault and uses them when creating an Azure SQL Server (pftc) with a database (pftcdev) and an automatic failover group with geo-redundancy:
+
+hcl
+Copy code
+provider "azurerm" {
+  features = {}
+}
+
+resource "azurerm_key_vault_secret" "sql_username" {
+  name         = "sql-username-secret"
+  key_vault_id = "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.KeyVault/vaults/<key-vault-name>"
+}
+
+resource "azurerm_key_vault_secret" "sql_password" {
+  name         = "sql-password-secret"
+  key_vault_id = "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.KeyVault/vaults/<key-vault-name>"
+}
+
+resource "azurerm_sql_server" "pftc" {
+  name                         = "pftc"
+  resource_group_name          = "your-resource-group-name"
+  location                     = "your-location"
+  version                      = "12.0"
+  administrator_login          = azurerm_key_vault_secret.sql_username.value
+  administrator_login_password = azurerm_key_vault_secret.sql_password.value
+
+  // Add other SQL Server configurations as needed
+
+  // Geo-Redundancy Configuration
+  geo_redundant_backup_enabled   = true
+  auto_pause_delay_in_minutes    = 60
+
+  // Add other failover group configurations as needed
+}
+
+resource "azurerm_sql_database" "pftcdev" {
+  name                        = "pftcdev"
+  resource_group_name         = azurerm_sql_server.pftc.resource_group_name
+  server_name                 = azurerm_sql_server.pftc.name
+  edition                     = "Standard"
+  collation                   = "SQL_Latin1_General_CP1_CI_AS"
+  max_size_gb                 = 1
+  requested_service_objective = "S0"  // Adjust as needed
+
+  // Add other database configurations as needed
+}
+
+resource "azurerm_sql_failover_group" "pftc" {
+  name                              = "pftc-failover-group"
+  resource_group_name               = azurerm_sql_server.pftc.resource_group_name
+  server_name                       = azurerm_sql_server.pftc.name
+
+  partner_server {
+    id                   = azurerm_sql_server.pftc.id
+    role                 = "Secondary"
+  }
+
+  // Add other failover group configurations as needed
+}
+Replace the placeholders (<subscription-id>, <resource-group-name>, <key-vault-name>, your-resource-group-name, your-location, etc.) with your actual Azure subscription details and desired configurations.
+
+This script assumes that you have already set up the Azure Key Vault and stored the SQL Server username and password as secrets. Additionally, it configures an SQL Server (pftc) with a database (pftcdev) and an automatic failover group with geo-redundancy. Adjust the script according to your specific requirements and configurations.
