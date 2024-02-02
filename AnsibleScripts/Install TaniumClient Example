@@ -1,0 +1,51 @@
+ Here's a basic example of an Ansible playbook to uninstall the existing TaniumClient and reinstall it on Red Hat 8:
+
+```yaml
+---
+- name: Uninstall and Reinstall TaniumClient
+  hosts: your_target_server
+  become: yes
+
+  tasks:
+    - name: Stop TaniumClient service
+      systemd:
+        name: taniumclient
+        state: stopped
+      ignore_errors: yes
+
+    - name: Remove TaniumClient directory
+      file:
+        path: /opt/TaniumClient
+        state: absent
+
+    - name: Uninstall TaniumClient
+      command: /path/to/uninstall-script.sh
+      ignore_errors: yes
+
+    - name: Create TaniumClient directory
+      file:
+        path: /opt/TaniumClient
+        state: directory
+
+    - name: Copy TaniumClient installation files
+      copy:
+        src: /path/to/taniumclient-installer.tar.gz
+        dest: /opt/TaniumClient/
+
+    - name: Extract TaniumClient installation files
+      ansible.builtin.unarchive:
+        src: /opt/TaniumClient/taniumclient-installer.tar.gz
+        dest: /opt/TaniumClient/
+
+    - name: Run TaniumClient installer
+      command: /opt/TaniumClient/install.sh
+
+    - name: Start TaniumClient service
+      systemd:
+        name: taniumclient
+        state: started
+```
+
+Make sure to replace "your_target_server" with the actual target server's hostname or IP address. Also, replace "/path/to/uninstall-script.sh" and "/path/to/taniumclient-installer.tar.gz" with the appropriate paths for your TaniumClient uninstall script and installation files.
+
+Remember to adapt this playbook according to your specific TaniumClient setup and requirements.
