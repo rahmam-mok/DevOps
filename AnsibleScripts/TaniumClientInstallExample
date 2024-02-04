@@ -1,0 +1,82 @@
+Certainly! Below is an example Ansible playbook for installing and configuring TaniumClient on Red Hat 8:
+
+```yaml
+---
+- name: Install and Configure TaniumClient on Red Hat 8
+  hosts: your_target_servers
+  become: true  # Run tasks with elevated privileges
+
+  tasks:
+    - name: Download TaniumClient installer
+      get_url:
+        url: "https://path/to/your/TaniumClientInstaller.rpm"
+        dest: "/tmp/TaniumClientInstaller.rpm"
+
+    - name: Install TaniumClient
+      package:
+        name: "/tmp/TaniumClientInstaller.rpm"
+        state: present
+
+    - name: Configure TaniumClient
+      template:
+        src: templates/taniumclient.conf.j2
+        dest: /etc/tanium/taniumclient/taniumclient.conf
+      notify:
+        - Restart TaniumClient
+
+  handlers:
+    - name: Restart TaniumClient
+      service:
+        name: taniumclient
+        state: restarted
+        enabled: yes
+```
+
+Explanation:
+
+1. Download the TaniumClient installer using `get_url`.
+2. Install TaniumClient using the `package` module.
+3. Configure TaniumClient by using a Jinja2 template (replace `templates/taniumclient.conf.j2` with your actual configuration template).
+4. Notify a handler to restart TaniumClient when the configuration changes.
+
+Make sure to replace `"https://path/to/your/TaniumClientInstaller.rpm"` with the actual URL of your TaniumClient installer. Also, update the `hosts` field with the target servers where you want to install TaniumClient.
+
+Save the playbook in a file, for example, `install_configure_tanium.yml`, and execute it with:
+
+```bash
+ansible-playbook install_configure_tanium.yml
+```
+
+Ensure that you customize the configuration template according to your TaniumClient settings.
+
+
+The content of your `taniumclient.conf.j2` file will depend on your specific TaniumClient configuration requirements. Below is a generic example to give you an idea. Replace the placeholder values with your actual Tanium configuration parameters:
+
+```ini
+[Client]
+  Name = {{ tanium_client_name }}
+  Server = {{ tanium_server_address }}
+  Port = {{ tanium_server_port }}
+  ZoneName = {{ tanium_zone_name }}
+
+[OtherSection]
+  # Additional TaniumClient configuration parameters can be added here
+  # Example:
+  # SomeParameter = SomeValue
+```
+
+In this example:
+
+- `{{ tanium_client_name }}`: The name you want to assign to the TaniumClient.
+- `{{ tanium_server_address }}`: The address of your Tanium server.
+- `{{ tanium_server_port }}`: The port on which Tanium server is running.
+- `{{ tanium_zone_name }}`: The zone name for Tanium (optional, depends on your Tanium setup).
+
+Add any other configuration parameters you need under the `[Client]` section or other sections as specified by Tanium's documentation.
+
+When using this template in your Ansible playbook, make sure to pass these variables using the `vars` section or define them in your inventory file.
+
+Remember to refer to Tanium's official documentation for specific configuration details based on your deployment.
+
+
+
