@@ -1,0 +1,74 @@
+Configuring Nagios Core for Active Directory (AD) authentication using Ansible involves creating a playbook that performs the necessary tasks. Below is a basic example to get you started:
+
+```yaml
+---
+- hosts: nagios_server
+  become: true
+  vars:
+    ad_server: "your.ad.server"
+    ad_domain: "domain.com"
+    ad_bind_user: "yourbinduser@domain.com"
+    ad_bind_password: "yourbindpassword"
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - apache2
+          - libapache2-mod-authnz-external
+        state: present
+
+    - name: Configure Apache for LDAP
+      template:
+        src: templates/apache2-nagios.conf.j2
+        dest: /etc/apache2/sites-enabled/000-default
+      notify:
+        - Restart Apache
+
+    - name: Configure Nagios for LDAP
+      template:
+        src: templates/nagios-apache2.conf.j2
+        dest: /etc/nagios/apache2.conf
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
+```
+
+Create a `templates` directory in the same directory as your playbook and add the following template files.
+
+`templates/apache2-nagios.conf.j2`:
+```apache
+<Location "/nagios/">
+    AuthType Basic
+    AuthName "Restricted Access"
+    AuthBasicProvider ldap
+    AuthLDAPURL "ldap://{{ ad_server }}/dc={{ ad_domain }}?sAMAccountName"
+    AuthLDAPBindDN "{{ ad_bind_user }}"
+    AuthLDAPBindPassword "{{ ad_bind_password }}"
+    Require valid-user
+</Location>
+```
+
+`templates/nagios-apache2.conf.j2`:
+```apache
+ScriptAlias /nagios/cgi-bin "/usr/local/nagios/sbin"
+
+<Directory "/usr/local/nagios/sbin">
+    AuthType Basic
+    AuthName "Restricted Access"
+    AuthBasicProvider ldap
+    AuthLDAPURL "ldap://{{ ad_server }}/dc={{ ad_domain }}?sAMAccountName"
+    AuthLDAPBindDN "{{ ad_bind_user }}"
+    AuthLDAPBindPassword "{{ ad_bind_password }}"
+    Require valid-user
+</Directory>
+```
+
+Make sure to replace placeholders such as `your.ad.server`, `domain.com`, `yourbinduser@domain.com`, and `yourbindpassword` with your actual AD server details.
+
+This playbook assumes you have Nagios Core already installed on the `nagios_server` host. Adjust the playbook according to your specific requirements and infrastructure.
