@@ -1,0 +1,46 @@
+ To use the existing resources and data blocks in Terraform, you can define the storage account and container using `data` blocks. Here's an example script:
+
+```hcl
+provider "azurerm" {
+  features = {}
+}
+
+# Data block to reference existing storage account
+data "azurerm_storage_account" "existing_storage_account" {
+  name                = "pftcstage"
+  resource_group_name = "YOUR_EXISTING_RESOURCE_GROUP" # Replace with your existing resource group name
+}
+
+# Data block to reference existing storage container within the storage account
+data "azurerm_storage_container" "existing_storage_container" {
+  name                  = "pftcfolderstage"
+  storage_account_name  = data.azurerm_storage_account.existing_storage_account.name
+  resource_group_name   = data.azurerm_storage_account.existing_storage_account.resource_group_name
+}
+
+# Create a management policy for the existing storage container
+resource "azurerm_storage_management_policy" "existing_management_policy" {
+  name               = "existing-policy"
+  storage_account_id = data.azurerm_storage_account.existing_storage_account.id
+  management_policy {
+    rule {
+      name    = "move-to-cool-after-90-days-existing"
+      enabled = true
+      type    = "Lifecycle"
+      definition {
+        actions {
+          base_blob {
+            tier_to_cool = {}
+          }
+        }
+        filter_blob_types = ["blockBlob"]
+        definition {
+          days_after_modification_greater_than = 90
+        }
+      }
+    }
+  }
+}
+```
+
+Replace "YOUR_EXISTING_RESOURCE_GROUP" with your actual existing resource group name. This script uses data blocks to reference the existing storage account and container, and then sets up a management policy for moving files to cool storage after 90 days within the specified folder ("pftcfolderstage"). Adjust it based on your specific details and requirements.
