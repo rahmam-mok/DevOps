@@ -1,0 +1,72 @@
+ Below is an example Ansible playbook for configuring Nagios Core for Active Directory (AD) authentication on RHEL 8:
+
+```yaml
+---
+- hosts: nagios_server
+  become: true
+  vars:
+    ad_server: "your.ad.server"
+    ad_domain: "domain.com"
+    ad_bind_user: "yourbinduser@domain.com"
+    ad_bind_password: "yourbindpassword"
+
+  tasks:
+    - name: Install required packages
+      dnf:
+        name:
+          - httpd
+          - mod_ldap
+        state: present
+
+    - name: Configure Apache for LDAP
+      template:
+        src: templates/apache2-nagios.conf.j2
+        dest: /etc/httpd/conf.d/nagios.conf
+      notify:
+        - Restart Apache
+
+    - name: Configure Nagios for LDAP
+      template:
+        src: templates/nagios-apache2.conf.j2
+        dest: /etc/nagios/conf.d/ad-authentication.cfg
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      systemd:
+        name: httpd
+        state: restarted
+```
+
+Create a `templates` directory in the same directory as your playbook and add the following template files.
+
+`templates/apache2-nagios.conf.j2`:
+```apache
+<Location "/nagios/">
+    AuthType Basic
+    AuthName "Restricted Access"
+    AuthBasicProvider ldap
+    AuthLDAPURL "ldap://{{ ad_server }}/dc={{ ad_domain }}?sAMAccountName"
+    AuthLDAPBindDN "{{ ad_bind_user }}"
+    AuthLDAPBindPassword "{{ ad_bind_password }}"
+    Require valid-user
+</Location>
+```
+
+`templates/nagios-apache2.conf.j2`:
+```apache
+<Directory "/usr/local/nagios/sbin">
+    AuthType Basic
+    AuthName "Restricted Access"
+    AuthBasicProvider ldap
+    AuthLDAPURL "ldap://{{ ad_server }}/dc={{ ad_domain }}?sAMAccountName"
+    AuthLDAPBindDN "{{ ad_bind_user }}"
+    AuthLDAPBindPassword "{{ ad_bind_password }}"
+    Require valid-user
+</Directory>
+```
+
+Ensure that you replace placeholders such as `your.ad.server`, `domain.com`, `yourbinduser@domain.com`, and `yourbindpassword` with your actual AD server details.
+
+This playbook assumes you have Nagios Core already installed on the `nagios_server` host. Adjust the playbook according to your specific requirements and infrastructure.
