@@ -1,0 +1,63 @@
+Configuring Nagios Core for Active Directory (AD) authentication involves several steps. Here's a general guide to help you set it up:
+
+**1. Install Required Packages:**
+   - Ensure that the `nagios` package is installed on your Nagios Core server.
+
+**2. Install Apache with AuthLDAP:**
+   - Install Apache with LDAP support:
+     ```bash
+     sudo apt-get install apache2 libapache2-mod-authnz-external
+     ```
+
+**3. Configure Apache:**
+   - Edit the Apache configuration file, typically located at `/etc/apache2/sites-enabled/000-default` or a similar path.
+   - Add the following lines to set up LDAP authentication:
+     ```apache
+     <Location "/nagios/">
+         AuthType Basic
+         AuthName "Restricted Access"
+         AuthBasicProvider ldap
+         AuthLDAPURL "ldap://your.ad.server/dc=domain,dc=com?sAMAccountName"
+         AuthLDAPBindDN "yourbinduser@domain.com"
+         AuthLDAPBindPassword "yourbindpassword"
+         Require valid-user
+     </Location>
+     ```
+   - Modify the `AuthLDAPURL`, `AuthLDAPBindDN`, and `AuthLDAPBindPassword` parameters with your AD server details.
+
+**4. Configure Nagios:**
+   - Update the Nagios Apache configuration to use the same LDAP authentication:
+     ```bash
+     sudo nano /etc/nagios/apache2.conf
+     ```
+     Add the following lines:
+     ```apache
+     ScriptAlias /nagios/cgi-bin "/usr/local/nagios/sbin"
+     
+     <Directory "/usr/local/nagios/sbin">
+         AuthType Basic
+         AuthName "Restricted Access"
+         AuthBasicProvider ldap
+         AuthLDAPURL "ldap://your.ad.server/dc=domain,dc=com?sAMAccountName"
+         AuthLDAPBindDN "yourbinduser@domain.com"
+         AuthLDAPBindPassword "yourbindpassword"
+         Require valid-user
+     </Directory>
+     ```
+
+**5. Restart Services:**
+   - Restart Apache:
+     ```bash
+     sudo systemctl restart apache2
+     ```
+
+**6. Test Authentication:**
+   - Try accessing Nagios through a web browser. You should be prompted for AD credentials.
+
+**Note:**
+   - Ensure that your Nagios server can reach the AD server, and necessary firewall rules are in place.
+   - Modify LDAP parameters according to your AD server configuration.
+   - Consider securing sensitive information like bind credentials.
+   - The paths and configuration details may vary based on your Linux distribution and Nagios version.
+
+Always refer to the official documentation for your specific Nagios Core version and Apache version, as configurations might differ slightly.
