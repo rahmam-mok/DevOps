@@ -1,0 +1,54 @@
+Certainly! Below is a basic example of a Terraform script to set up an Azure Storage account and configure a lifecycle policy to move files from a folder to the Azure Cloud Storage:
+
+```hcl
+provider "azurerm" {
+  features = {}
+}
+
+resource "azurerm_resource_group" "example" {
+  name     = "example-resource-group"
+  location = "East US"
+}
+
+resource "azurerm_storage_account" "example" {
+  name                     = "examplestorageaccount"
+  resource_group_name      = azurerm_resource_group.example.name
+  location                 = azurerm_resource_group.example.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_storage_container" "example" {
+  name                  = "examplecontainer"
+  storage_account_name  = azurerm_storage_account.example.name
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_management_policy" "example" {
+  name                 = "example-policy"
+  storage_account_id   = azurerm_storage_account.example.id
+  resource_group_name  = azurerm_resource_group.example.name
+  management_policy {
+    rule {
+      name = "move-to-cool-after-30-days"
+      enabled = true
+      type = "Lifecycle"
+      definition {
+        actions {
+          base_blob {
+            delete = "AfterThirtyDays"
+          }
+        }
+        filter_blob_types = ["blockBlob"]
+        definition {
+          days_after_modification_greater_than = 30
+        }
+      }
+    }
+  }
+}
+```
+
+This script creates an Azure Resource Group, a Storage Account, a Storage Container, and configures a management policy for moving files to cool storage after 30 days. Make sure to adapt it according to your specific requirements and Azure environment.
+
+Remember to authenticate Terraform with your Azure subscription using the necessary credentials or authentication method.
