@@ -1,0 +1,118 @@
+To deploy two different pods for the same Java Spring Boot application, each running a different part of the application's process or functionalities in an AKS cluster, you can use Helm and Kubernetes. Here's a basic guide:
+
+1. **Helm Chart Structure:**
+   Organize your Helm chart directory with separate templates for each deployment and shared resources.
+
+   ```
+   myapp-chart/
+   ├── charts/
+   ├── templates/
+   │   ├── deployment-part1.yaml
+   │   ├── deployment-part2.yaml
+   │   ├── service.yaml
+   ├── values.yaml
+   ├── Chart.yaml
+   ```
+
+2. **Define Deployments:**
+   Create separate deployment YAML files (`deployment-part1.yaml` and `deployment-part2.yaml`) for each pod, specifying the relevant part of the application.
+
+   ```yaml
+   # deployment-part1.yaml
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: myapp-deployment-part1
+   spec:
+     replicas: 1
+     template:
+       metadata:
+         labels:
+           app: myapp
+           component: part1
+       spec:
+         containers:
+         - name: myapp-container
+           image: your-image:tag
+           args: ["java", "-jar", "/app/app.jar", "--part=part1"]
+           # Add other container settings as needed
+   ```
+
+   ```yaml
+   # deployment-part2.yaml
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: myapp-deployment-part2
+   spec:
+     replicas: 1
+     template:
+       metadata:
+         labels:
+           app: myapp
+           component: part2
+       spec:
+         containers:
+         - name: myapp-container
+           image: your-image:tag
+           args: ["java", "-jar", "/app/app.jar", "--part=part2"]
+           # Add other container settings as needed
+   ```
+
+3. **Service Configuration:**
+   Define a common service for both deployments in the `service.yaml` file.
+
+   ```yaml
+   # service.yaml
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: myapp-service
+   spec:
+     selector:
+       app: myapp
+     ports:
+       - protocol: TCP
+         port: 80
+         targetPort: 8080 # Adjust as per your application's needs
+   ```
+
+4. **Values Configuration:**
+   Customize your `values.yaml` file to allow flexibility in configuring parameters for each deployment.
+
+   ```yaml
+   # values.yaml
+   deploymentPart1:
+     image: your-image:tag
+     # Add other parameters for deployment-part1
+
+   deploymentPart2:
+     image: your-image:tag
+     # Add other parameters for deployment-part2
+   ```
+
+5. **Install the Helm Chart:**
+   Install your Helm chart using the following command, providing the path to your chart directory:
+
+   ```bash
+   helm install myapp-release ./myapp-chart
+   ```
+
+   Ensure that your AKS cluster is properly configured.
+
+This setup allows you to deploy two different pods for the same Java Spring Boot application, each running a different part of the application's process or functionalities. Adjust the YAML files according to your specific application and deployment requirements.
+
+
+
+In the example YAML files provided, the `--part` argument is a placeholder for a custom command-line argument that you might want to pass to your Java Spring Boot application.
+
+Specifically, in the context of the deployment YAML files:
+
+- `args: ["java", "-jar", "/app/app.jar", "--part=part1"]` in `deployment-part1.yaml`
+- `args: ["java", "-jar", "/app/app.jar", "--part=part2"]` in `deployment-part2.yaml`
+
+Here, the `--part` argument is just an illustrative example. In a real-world scenario, you would replace `--part=part1` and `--part=part2` with the actual command-line arguments that your Spring Boot application expects.
+
+For instance, if your Spring Boot application has custom functionality or components that can be controlled through command-line arguments, you would define and pass those arguments accordingly. The choice of the argument name (`--part` in this case) and its value depends on how your Spring Boot application is designed to interpret command-line inputs.
+
+Make sure to adjust these arguments based on your specific application's requirements and how it processes command-line inputs during runtime.
