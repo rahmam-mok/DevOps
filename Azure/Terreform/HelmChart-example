@@ -1,0 +1,101 @@
+To deploy two different pods for the same application with one pod using a different application process in an AKS cluster, you can achieve this by creating a Helm chart with multiple deployments.
+
+1. **Create Helm Chart Structure:**
+   Organize your Helm chart directory with separate templates for each deployment. For example:
+
+   ```
+   myapp-chart/
+   ├── charts/
+   ├── templates/
+   │   ├── deployment-1.yaml
+   │   ├── deployment-2.yaml
+   │   ├── service.yaml
+   ├── values.yaml
+   ├── Chart.yaml
+   ```
+
+2. **Define Deployments:**
+   Create separate deployment YAML files (`deployment-1.yaml` and `deployment-2.yaml`) for each pod, adjusting the necessary parameters like container image, environment variables, etc.
+
+   ```yaml
+   # deployment-1.yaml
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: myapp-deployment-1
+   spec:
+     replicas: 1
+     template:
+       metadata:
+         labels:
+           app: myapp
+           component: deployment-1
+       spec:
+         containers:
+         - name: myapp-container
+           image: your-image-1:tag
+           # Add other container settings as needed
+   ```
+
+   ```yaml
+   # deployment-2.yaml
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: myapp-deployment-2
+   spec:
+     replicas: 1
+     template:
+       metadata:
+         labels:
+           app: myapp
+           component: deployment-2
+       spec:
+         containers:
+         - name: myapp-container
+           image: your-image-2:tag
+           # Add other container settings as needed
+   ```
+
+3. **Service Configuration:**
+   Define a common service for both deployments in the `service.yaml` file.
+
+   ```yaml
+   # service.yaml
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: myapp-service
+   spec:
+     selector:
+       app: myapp
+     ports:
+       - protocol: TCP
+         port: 80
+         targetPort: 8080 # Adjust as per your application's needs
+   ```
+
+4. **Values Configuration:**
+   Customize your `values.yaml` file to allow flexibility in configuring parameters for each deployment.
+
+   ```yaml
+   # values.yaml
+   deployment1:
+     image: your-image-1:tag
+     # Add other parameters for deployment-1
+
+   deployment2:
+     image: your-image-2:tag
+     # Add other parameters for deployment-2
+   ```
+
+5. **Install the Helm Chart:**
+   Install your Helm chart using the following command, providing the path to your chart directory:
+
+   ```bash
+   helm install myapp-release ./myapp-chart
+   ```
+
+   Ensure that your AKS cluster is properly configured.
+
+This setup allows you to deploy two different pods with distinct configurations for the same application using Helm in an AKS cluster. Adjust the YAML files according to your specific application and deployment requirements.
