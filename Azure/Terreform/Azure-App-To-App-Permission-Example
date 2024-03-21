@@ -1,0 +1,48 @@
+have two single tenant Azure AD apps A and B. App A represents a service and app B a client. I'm trying to allow B to access A with an AAD JWT token obtained using the AAD OAuth2 client credentials flow. I've defined an appRole in the manifest for A and am adding that as an API permission for B. How can I achieve this using terraform script
+
+1. Define the Azure AD applications (App A and App B) in your Terraform configuration using the `azuread_application` resource.
+2. Define the app roles for App A using the `app_roles` block within the `azuread_application` resource for App A.
+3. Define the service principal for App B using the `azuread_service_principal` resource.
+4. Assign the necessary API permissions for App B to access App A using the `azuread_service_principal_app_role_assignment` resource.
+5. Configure the OAuth2 client credentials flow for App A.
+
+Here's a simplified example of how you can achieve this in Terraform:
+
+```hcl
+# Define App A
+resource "azuread_application" "app_a" {
+  name = "App A"
+  # Other required attributes...
+  
+  # Define app roles for App A
+  app_roles {
+    allowed_member_types = ["Application"]
+    description         = "Access to App A"
+    display_name        = "AccessAppA"
+    value               = "access_app_a"
+  }
+}
+
+# Define App B
+resource "azuread_application" "app_b" {
+  name = "App B"
+  # Other required attributes...
+}
+
+# Define Service Principal for App B
+resource "azuread_service_principal" "app_b_sp" {
+  application_id = azuread_application.app_b.application_id
+}
+
+# Assign API permissions for App B to access App A
+resource "azuread_service_principal_app_role_assignment" "app_b_assignment" {
+  principal_id   = azuread_service_principal.app_b_sp.id
+  role_definition_id = azuread_application.app_a.app_roles[0].id
+  # Assign other required attributes...
+}
+
+# Configure OAuth2 client credentials flow for App A
+# You may need to refer to the Azure provider documentation for specific configuration details.
+```
+
+Make sure to fill in the appropriate attributes such as `name`, `application_id`, and other required fields with your specific values. Additionally, consult the Azure provider documentation for any additional configuration needed for the OAuth2 client credentials flow.
