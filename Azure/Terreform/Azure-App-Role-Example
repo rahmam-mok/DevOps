@@ -1,0 +1,43 @@
+To allow Azure AD App B to access Azure AD App A with an AAD JWT token obtained using the OAuth2 client credentials flow, you can configure the necessary permissions and roles using Terraform. Below is an example of how you can achieve this:provider "azurerm" {
+  features {}
+}
+
+# Define Azure AD App A
+data "azuread_application" "app_a" {
+  display_name = "App A Name"
+}
+
+# Define Azure AD App B
+data "azuread_application" "app_b" {
+  display_name = "App B Name"
+}
+
+# Retrieve the service principal object id of App B
+data "azuread_service_principal" "app_b_sp" {
+  application_id = data.azuread_application.app_b.application_id
+}
+
+# Define role assignment to App B
+resource "azuread_application_app_role_assignment" "app_b_role_assignment" {
+  application_id = data.azuread_application.app_a.application_id
+  principal_id   = data.azuread_service_principal.app_b_sp.id
+  app_role_id    = "App A's app role id to be assigned to App B"
+}
+In the above script:azuread_application data blocks are used to retrieve information about Azure AD Apps A and B.azuread_service_principal data block retrieves the service principal object id of App B.azuread_application_app_role_assignment resource assigns a specific app role from App A to App B.Make sure to replace "App A Name" and "App B Name" with the actual display names of your Azure AD Apps A and B, and "App A's app role id to be assigned to App B" with the actual App role ID of App A that you want to assign to App B.This configuration sets up the necessary role assignment to allow Azure AD App B to access Azure AD App A using JWT tokens obtained through the OAuth2 client credentials flow.
+
+
+####################
+To get the app_role_id in Terraform, you can use the azuread_application_app_role data source. This data source allows you to fetch information about the app roles defined in an Azure AD application. Here's how you can use it:provider "azuread" {}
+
+data "azuread_application_app_role" "app_a_roles" {
+  application_object_id = "<App_A_Object_ID>"
+}
+
+output "app_role_id" {
+  value = data.azuread_application_app_role.app_a_roles.app_roles[0].id
+}
+Replace <App_A_Object_ID> with the Object ID of Azure AD App A. This Terraform configuration retrieves information about the app roles defined in Azure AD App A and outputs the app_role_id of the first app role found.After running terraform apply, you can retrieve the app_role_id by checking the Terraform output. You can then use this app_role_id in your existing Terraform configuration to assign the app role to Azure AD App B.
+
+
+
+
