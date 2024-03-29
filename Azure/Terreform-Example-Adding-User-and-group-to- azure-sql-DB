@@ -1,0 +1,110 @@
+Got it. You can use Terraform's data blocks to reference existing Azure SQL Server and database resources, and then add existing Azure AD users and groups to the database with read-only access. Here's how you can achieve that:provider "azurerm" {
+  features {}
+}
+
+# Retrieve existing Azure SQL Server
+data "azurerm_sql_server" "existing_sql_server" {
+  name                = "sqltestserver"
+  resource_group_name = "your-resource-group-name"
+}
+
+# Retrieve existing Azure SQL Database
+data "azurerm_sql_database" "existing_sql_database" {
+  name                  = "testdb"
+  server_name           = data.azurerm_sql_server.existing_sql_server.name
+  resource_group_name   = "your-resource-group-name"
+}
+
+# Define the existing Azure AD user or group you want to grant access
+resource "azurerm_sql_active_directory_principal" "example" {
+  server_name         = data.azurerm_sql_server.existing_sql_server.name
+  resource_group_name = "your-resource-group-name"
+  login               = "your-azure-ad-username"  # or group name
+  tenant_id           = "your-azure-ad-tenant-id"
+}
+
+# Grant read-only access to the Azure AD user or group
+resource "azurerm_sql_role_assignment" "example" {
+  scope                        = data.azurerm_sql_database.existing_sql_database.id
+  role_definition_name         = "Reader"
+  principal_id                 = azurerm_sql_active_directory_principal.example.object_id
+}
+Make sure to replace "your-resource-group-name", "your-azure-ad-username", and "your-azure-ad-tenant-id" with your actual values.This configuration ensures that Terraform does not try to create new SQL Server or Database resources and only focuses on adding existing Azure AD users and groups to the database with read-only access.
+
+
+
+###############################
+
+To add an existing user group to your Azure SQL database with read-only access using Terraform, you can use the azurerm_sql_active_directory_administrator resource to set up Azure Active Directory (AAD) authentication and then grant permissions to the user group. Here's a basic example:provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_sql_server" "example" {
+  name                         = "your-sql-server-name"
+  resource_group_name          = "your-resource-group-name"
+  location                     = "your-location"
+  version                      = "12.0"
+  administrator_login          = "your-admin-username"
+  administrator_login_password = "your-admin-password"
+}
+
+resource "azurerm_sql_database" "example" {
+  name                     = "your-database-name"
+  resource_group_name      = "your-resource-group-name"
+  server_name              = azurerm_sql_server.example.name
+  edition                  = "Standard"
+  collation                = "SQL_Latin1_General_CP1_CI_AS"
+  max_size_bytes           = "1073741824" # 1 GB
+  min_capacity             = 0.5
+}
+
+resource "azurerm_sql_active_directory_administrator" "example" {
+  server_name         = azurerm_sql_server.example.name
+  resource_group_name = azurerm_sql_server.example.resource_group_name
+  login               = "your-azure-ad-group@example.com"
+  tenant_id           = "your-azure-ad-tenant-id"
+}
+
+resource "azurerm_sql_role_assignment" "example" {
+  scope                        = azurerm_sql_database.example.id
+  role_definition_name         = "Reader"
+  principal_id                 = azurerm_sql_active_directory_administrator.example.object_id
+}
+Replace placeholders like your-sql-server-name, your-resource-group-name, your-admin-username, your-admin-password, your-database-name, your-azure-ad-group@example.com, and your-azure-ad-tenant-id with your actual values.This configuration sets up the Azure SQL server and database, adds the Azure AD group as an administrator for the SQL server, and then assigns the "Reader" role to the Azure AD group on the specified database, granting read-only access.
+
+
+############################
+
+To add existing Azure Active Directory (AAD) users and groups to your Azure SQL database with read-only access using Terraform, you can use the azurerm_sql_active_directory_principal and azurerm_sql_role_assignment resources. Here's how you can do it:provider "azurerm" {
+  features {}
+}
+
+# Define the existing Azure SQL Database
+resource "azurerm_sql_database" "example" {
+  name                     = "your-database-name"
+  resource_group_name      = "your-resource-group-name"
+  server_name              = "your-sql-server-name"
+}
+
+# Define the existing Azure AD user or group you want to grant access
+resource "azurerm_sql_active_directory_principal" "example" {
+  server_name         = "your-sql-server-name"
+  resource_group_name = "your-resource-group-name"
+  login               = "your-azure-ad-username"  # or group name
+  tenant_id           = "your-azure-ad-tenant-id"
+}
+
+# Grant read-only access to the Azure AD user or group
+resource "azurerm_sql_role_assignment" "example" {
+  scope                        = azurerm_sql_database.example.id
+  role_definition_name         = "Reader"
+  principal_id                 = azurerm_sql_active_directory_principal.example.object_id
+}
+Replace placeholders like your-database-name, your-resource-group-name, your-sql-server-name, your-azure-ad-username, and your-azure-ad-tenant-id with your actual values.This configuration will add the existing Azure AD user or group to your Azure SQL database with read-only access.
+
+
+
+
+
+
+
