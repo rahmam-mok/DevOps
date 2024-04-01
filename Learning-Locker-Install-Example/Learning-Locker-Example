@@ -1,0 +1,68 @@
+To create a Learning Locker user, install Learning Locker applications, install PM2 to manage Learning Locker application processes, and enable Learning Locker applications to start at boot time on Red Hat using Ansible, you'll need to structure your playbook accordingly. Here's how you can do it:Ansible Playbook Structure: Set up your playbook with a main playbook file and roles directory.Main Playbook (learning_locker_install.yml):---
+- name: Install Learning Locker applications on Red Hat
+  hosts: your_target_hosts
+  become: true
+  roles:
+    - create_learning_locker_user
+    - install_learning_locker
+    - install_pm2
+    - configure_startup
+Roles Directory: Inside the roles directory, create four roles: create_learning_locker_user, install_learning_locker, install_pm2, and configure_startup.Create Learning Locker User Role (roles/create_learning_locker_user/tasks/main.yml):---
+- name: Create Learning Locker user
+  user:
+    name: learninglocker
+    shell: /bin/bash
+    createhome: yes
+Install Learning Locker Role (roles/install_learning_locker/tasks/main.yml):---
+- name: Install required dependencies
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - epel-release
+    - git
+    # Add other dependencies as needed
+
+- name: Clone Learning Locker repository
+  git:
+    repo: https://github.com/LearningLocker/learninglocker.git
+    dest: /opt/learninglocker
+    version: master
+  become_user: learninglocker
+
+- name: Install Node.js
+  yum:
+    name: nodejs
+    state: present
+  become_user: learninglocker
+
+- name: Install MongoDB
+  yum:
+    name: mongodb-org
+    state: present
+  become_user: learninglocker
+
+- name: Install required Node.js packages
+  npm:
+    name: "{{ item }}"
+    global: yes
+  loop:
+    - grunt-cli
+    # Add other required packages
+  become_user: learninglocker
+Install PM2 Role (roles/install_pm2/tasks/main.yml):---
+- name: Install PM2
+  npm:
+    name: pm2
+    global: yes
+  become_user: learninglocker
+Configure Startup Role (roles/configure_startup/tasks/main.yml):---
+- name: Configure PM2 to start Learning Locker apps at boot
+  command: pm2 startup systemd -u learninglocker --hp /home/learninglocker
+  become_user: learninglocker
+
+- name: Save PM2 configuration
+  command: pm2 save
+  become_user: learninglocker
+Variables (Optional): Define variables in the respective role directories if needed for customization.Inventory File (inventory.yml): Define your target hosts in an inventory file.Running the Playbook:ansible-playbook -i inventory.yml learning_locker_install.yml
+Adjust the playbook and roles as necessary for your environment and specific requirements. This playbook will create the Learning Locker user, install Learning Locker applications, install PM2 to manage application processes, and configure PM2 to start Learning Locker applications at boot time.
