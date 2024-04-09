@@ -1,0 +1,27 @@
+To achieve this using Terraform, you can follow these steps:Use the azuread_group resource to reference the existing AD group (pftcgroup) in Azure AD.Use the azuread_service_principal resource to reference the Azure Enterprise Application.Use the azuread_service_principal_member resource to add the AD group (pftcgroup) as a member of the Enterprise Application.Use the appropriate role assignment resource to assign the support role to the AD group within the Enterprise Application.Here's a simplified example of how you can do this in Terraform:provider "azuread" {
+  # Configure Azure AD provider
+}
+
+resource "azuread_group" "existing_group" {
+  name = "pftcgroup"
+}
+
+resource "azuread_service_principal" "enterprise_app" {
+  # Reference the Azure Enterprise Application
+  # Replace "enterprise_app_id" with the actual ID of your Enterprise Application
+  application_id = "enterprise_app_id"
+}
+
+resource "azuread_service_principal_member" "add_member" {
+  # Add the AD group as a member of the Enterprise Application
+  service_principal_id = azuread_service_principal.enterprise_app.object_id
+  group_object_ids     = [azuread_group.existing_group.object_id]
+}
+
+# Replace "role_assignment_id" with the actual ID of the support role you want to assign
+resource "azuread_application_owner" "assign_role" {
+  application_object_id = azuread_service_principal.enterprise_app.object_id
+  principal_id          = azuread_group.existing_group.object_id
+  role_definition_id    = "role_assignment_id"
+}
+Make sure to replace placeholders like enterprise_app_id and role_assignment_id with actual values from your Azure environment. Additionally, ensure that the necessary Azure AD permissions are configured for your Terraform service principal to perform these operations.
