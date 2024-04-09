@@ -1,0 +1,21 @@
+To dynamically add an Azure Active Directory (AAD) user group to an enterprise application using Terraform's data block, you can utilize the azuread_group data source to retrieve information about the group and then use that information to assign the group to the enterprise application. Here's how you can do it:# Define Azure AD Enterprise Application
+resource "azuread_application" "example_app" {
+  name = "example-enterprise-app"
+}
+
+# Define Azure AD Service Principal
+resource "azuread_service_principal" "example_sp" {
+  application_id = azuread_application.example_app.application_id
+}
+
+# Define Azure AD User Group (Data block)
+data "azuread_group" "example_group" {
+  display_name = "example-group"
+}
+
+# Assign Group to Application
+resource "azuread_application_group_membership" "example_membership" {
+  application_object_id = azuread_application.example_app.object_id
+  group_object_ids      = [data.azuread_group.example_group.object_id]
+}
+In this configuration:We define the Azure AD enterprise application and service principal as before.We use the azuread_group data source to dynamically fetch information about the user group named "example-group".Then, we use the retrieved information (specifically, the object ID) to assign the user group to the enterprise application using the azuread_application_group_membership resource.This approach allows for dynamic assignment of user groups to enterprise applications without hardcoding the group's object ID in the Terraform configuration file.
