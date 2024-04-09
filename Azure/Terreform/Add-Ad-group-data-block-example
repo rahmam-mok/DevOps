@@ -1,0 +1,28 @@
+You can use Terraform's data block to query for existing resources in Azure AD and then use that information to configure the resources you want to create or modify. Here's how you can use the azuread_group data source to get information about the existing AD group and then use it to add the group to the Enterprise Application and assign the support role:provider "azuread" {
+  # Configure Azure AD provider
+}
+
+# Data block to query existing Azure AD group
+data "azuread_group" "existing_group" {
+  display_name = "pftcgroup"
+}
+
+resource "azuread_service_principal" "enterprise_app" {
+  # Reference the Azure Enterprise Application
+  # Replace "enterprise_app_id" with the actual ID of your Enterprise Application
+  application_id = "enterprise_app_id"
+}
+
+resource "azuread_service_principal_member" "add_member" {
+  # Add the AD group as a member of the Enterprise Application
+  service_principal_id = azuread_service_principal.enterprise_app.object_id
+  group_object_ids     = [data.azuread_group.existing_group.id]
+}
+
+# Replace "role_assignment_id" with the actual ID of the support role you want to assign
+resource "azuread_application_owner" "assign_role" {
+  application_object_id = azuread_service_principal.enterprise_app.object_id
+  principal_id          = data.azuread_group.existing_group.id
+  role_definition_id    = "role_assignment_id"
+}
+In this example:We use the azuread_group data source to query for the existing AD group with the display name "pftcgroup".Then, we reference the id attribute of the queried group in the azuread_service_principal_member and azuread_application_owner resources to add the group as a member of the Enterprise Application and assign the support role, respectively.Again, ensure that you replace placeholders like enterprise_app_id and role_assignment_id with actual values from your Azure environment. Also, make sure to configure the necessary permissions for your Terraform service principal to query Azure AD resources.
