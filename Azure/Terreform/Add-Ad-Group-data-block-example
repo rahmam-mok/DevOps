@@ -1,0 +1,27 @@
+To achieve this, you can use Terraform's data blocks to dynamically capture the Azure Service Principal IDs, and then use them to add the AD group to the Enterprise Application and assign the support role. Here's how you can do it:provider "azuread" {
+  # Configure Azure AD provider
+}
+
+# Data block to query existing Azure AD group
+data "azuread_group" "existing_group" {
+  display_name = "pftcgroup"
+}
+
+# Data block to query existing Azure AD service principal (Enterprise Application)
+data "azuread_service_principal" "enterprise_app" {
+  display_name = "YourEnterpriseApplicationName"
+}
+
+resource "azuread_service_principal_member" "add_member" {
+  # Add the AD group as a member of the Enterprise Application
+  service_principal_id = data.azuread_service_principal.enterprise_app.object_id
+  group_object_ids     = [data.azuread_group.existing_group.id]
+}
+
+# Replace "role_assignment_id" with the actual ID of the support role you want to assign
+resource "azuread_application_owner" "assign_role" {
+  application_object_id = data.azuread_service_principal.enterprise_app.object_id
+  principal_id          = data.azuread_group.existing_group.object_id
+  role_definition_id    = "role_assignment_id"
+}
+In this example:We use data blocks to query the existing Azure AD group (pftcgroup) and the existing Azure AD service principal (Enterprise Application).We then reference the object_id attributes of both the group and the service principal to dynamically capture their IDs.Finally, we use these dynamically captured IDs in the azuread_service_principal_member and azuread_application_owner resources to add the group as a member of the Enterprise Application and assign the support role, respectively.Make sure to replace "YourEnterpriseApplicationName" with the actual name of your Enterprise Application and "role_assignment_id" with the actual ID of the support role you want to assign. This approach allows you to dynamically capture the Azure Service Principal IDs and use them in your Terraform configuration.
