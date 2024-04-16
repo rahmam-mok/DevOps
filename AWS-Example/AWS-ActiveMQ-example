@@ -1,0 +1,28 @@
+To create an ActiveMQ broker on AWS using the AWS Managed ActiveMQ service (AWSMQ) with Terraform, you can use the aws_mq_broker resource. Here's an example Terraform configuration:provider "aws" {
+  region = "us-east-1"  # Set your desired AWS region
+}
+
+resource "aws_mq_broker" "my_broker" {
+  broker_name = "my-activemq-broker"
+  engine_type = "ActiveMQ"
+  engine_version = "5.15.8"
+  host_instance_type = "mq.t2.micro"
+  publicly_accessible = true
+  deployment_mode = "SINGLE_INSTANCE"
+  
+  users {
+    username = "admin"
+    password = "yourAdminPassword"
+    console_access = true
+  }
+  
+  logs {
+    general = "ENABLED"
+    audit = "ENABLED"
+    error = "ENABLED"
+  }
+  
+  subnet_ids = ["subnet-12345678"]  # Replace with your subnet ID
+  security_groups = ["sg-12345678"]  # Replace with your security group ID
+}
+In this example:broker_name: Name of the ActiveMQ broker.engine_type and engine_version: Engine type and version. For ActiveMQ, use "ActiveMQ" as the engine type and specify the desired version.host_instance_type: Instance type for the broker host.publicly_accessible: Whether the broker is accessible from the internet.deployment_mode: Deployment mode for the broker. Options are "SINGLE_INSTANCE" or "ACTIVE_STANDBY_MULTI_AZ".users: Configuration for users allowed to access the broker. Here, an admin user with console access is defined.logs: Configuration for broker logs.subnet_ids: List of subnet IDs where the broker should be deployed.security_groups: List of security group IDs to associate with the broker.Make sure to replace placeholder values such as yourAdminPassword, subnet-12345678, and sg-12345678 with appropriate values from your AWS account.This configuration creates a single-instance ActiveMQ broker accessible over the internet. Adjustments can be made based on your specific requirements and security considerations.
