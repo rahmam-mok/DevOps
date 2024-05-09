@@ -1,0 +1,109 @@
+Terraform script that creates an Azure SQL Database named "pft" and configures it to auto-scale when the usage size reaches 75%.
+
+hcl
+Copy code
+# Configure the Azure provider
+provider "azurerm" {
+  features {}
+}
+
+# Define variables
+variable "resource_group_name" {
+  default = "example-resources"
+}
+
+variable "location" {
+  default = "East US"
+}
+
+variable "sql_server_name" {
+  default = "example-sql-server"
+}
+
+variable "admin_username" {
+  default = "sqladmin"
+}
+
+variable "admin_password" {
+  default = "YourStrongPasswordHere!"
+}
+
+variable "database_name" {
+  default = "pft"
+}
+
+# Create a resource group
+resource "azurerm_resource_group" "example" {
+  name     = var.resource_group_name
+  location = var.location
+}
+
+# Create an Azure SQL Server
+resource "azurerm_sql_server" "example" {
+  name                         = var.sql_server_name
+  resource_group_name          = azurerm_resource_group.example.name
+  location                     = azurerm_resource_group.example.location
+  version                      = "12.0"
+  administrator_login          = var.admin_username
+  administrator_login_password = var.admin_password
+}
+
+# Create a SQL Database
+resource "azurerm_sql_database" "example" {
+  name                = var.database_name
+  resource_group_name = azurerm_resource_group.example.name
+  server_name         = azurerm_sql_server.example.name
+  edition             = "Standard"
+  collation           = "SQL_Latin1_General_CP1_CI_AS"
+  max_size_gb         = 5
+}
+
+# Configure autoscaling for the SQL Database
+resource "azurerm_mssql_elasticpool" "example" {
+  name                = "${azurerm_sql_database.example.name}-pool"
+  resource_group_name = azurerm_resource_group.example.name
+  server_name         = azurerm_sql_server.example.name
+  dtu                 = 50
+  max_size_gb         = 100
+}
+
+# Set up autoscaling rule based on usage size
+resource "azurerm_monitor_autoscale_setting" "example" {
+  name                = "autoscale-${azurerm_sql_database.example.name}"
+  resource_group_name = azurerm_resource_group.example.name
+  target_resource_id  = azurerm_sql_database.example.id
+  profiles {
+    name = "DefaultProfile"
+    capacity {
+      default = 1
+      minimum = 1
+      maximum = 5
+    }
+    rules {
+      metric_trigger {
+        metric_name        = "storage_percent"
+        metric_namespace   = "Microsoft.Sql/servers/databases"
+        metric_resource_id = azurerm_sql_database.example.id
+        operator           = "GreaterThan"
+        threshold          = 75
+        time_aggregation   = "Average"
+        time_grain         = "PT5M"
+        statistic          = "Average"
+        time_window        = "PT5M"
+      }
+      scale_action {
+        direction = "Increase"
+        type      = "ChangeCount"
+        value     = "1"
+        cooldown  = "PT5M"
+      }
+    }
+  }
+}
+In this script:
+
+Replace "YourStrongPasswordHere!" in admin_password with your actual SQL Server administrator password.
+The azurerm_mssql_elasticpool resource defines an elastic pool for the database, which is a prerequisite for autoscaling.
+The azurerm_monitor_autoscale_setting resource sets up autoscaling based on storage usage reaching 75%. Adjust the threshold value if you want a different threshold.
+The autoscale rule increases the database capacity by 1 when the storage usage exceeds 75%, with a cooldown period of 5 minutes (PT5M).
+After configuring this script, run terraform init followed by terraform apply to provision the Azure SQL Database and set up autoscaling.
