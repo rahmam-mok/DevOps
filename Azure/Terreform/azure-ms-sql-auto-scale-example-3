@@ -1,0 +1,109 @@
+To achieve the desired setup in Azure using Terraform, you'll need to create Azure resources for your SQL Server, databases, Azure Monitor alerts, and an action group for sending emails. Here's a step-by-step guide to help you with this:
+
+Set up Terraform Environment:
+Make sure you have Terraform installed and configured on your machine.
+Define Variables:
+Create a variables.tf file to define the variables needed for your Azure resources and alert configurations.
+hcl
+Copy code
+variable "resource_group_name" {
+  description = "The name of the resource group"
+}
+
+variable "location" {
+  description = "The Azure region"
+}
+
+variable "sql_server_name" {
+  description = "Name of the SQL Server"
+}
+
+variable "databases" {
+  type        = list(string)
+  description = "List of database names"
+  default     = ["pftone", "pfttwo", "pftthree"]
+}
+
+variable "alert_emails" {
+  type        = list(string)
+  description = "Email addresses for alert notifications"
+}
+
+# Add other variables as needed
+Provider Configuration:
+In main.tf, configure your Azure provider and resource group.
+hcl
+Copy code
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "example" {
+  name     = var.resource_group_name
+  location = var.location
+}
+SQL Server and Databases Creation:
+Define resources for creating an Azure SQL Server instance and the databases.
+hcl
+Copy code
+resource "azurerm_sql_server" "example" {
+  name                         = var.sql_server_name
+  resource_group_name          = azurerm_resource_group.example.name
+  location                     = azurerm_resource_group.example.location
+  version                      = "12.0"
+  administrator_login          = "admin_username"
+  administrator_login_password = "admin_password"
+  tags                         = { Environment = "Production" }
+}
+
+resource "azurerm_sql_database" "example" {
+  for_each            = toset(var.databases)
+  name                = each.key
+  resource_group_name = azurerm_resource_group.example.name
+  server_name         = azurerm_sql_server.example.name
+  edition             = "Standard"
+  collation           = "SQL_Latin1_General_CP1_CI_AS"
+  max_size_gb         = 5
+}
+Azure Monitor Alerts:
+Define Azure Monitor alerts for storage, CPU, and memory utilization reaching 75% for each database.
+hcl
+Copy code
+resource "azurerm_monitor_metric_alert" "storage_alert" {
+  for_each            = toset(var.databases)
+  name                = "${each.key}-storage-alert"
+  resource_group_name = azurerm_resource_group.example.name
+  scopes              = [azurerm_sql_database.example[each.key].id]
+  description         = "Alert when storage utilization reaches 75% for ${each.key}"
+  enabled             = true
+
+  criteria {
+    metric_namespace = "Microsoft.Sql/servers/databases"
+    metric_name      = "storage_percent"
+    aggregation      = "Average"
+    operator         = "GreaterThanOrEqual"
+    threshold        = 75
+  }
+
+  action {
+    action_group_id = azurerm_monitor_action_group.example.id
+  }
+}
+
+# Define similar alerts for CPU and Memory utilization
+Action Group for Email Notifications:
+Create an action group to define email notifications for alerts.
+hcl
+Copy code
+resource "azurerm_monitor_action_group" "example" {
+  name                = "email-action-group"
+  resource_group_name = azurerm_resource_group.example.name
+  short_name          = "Email"
+  email_receiver {
+    name          = "email-receiver"
+    email_address = var.alert_emails
+  }
+}
+Deploy and Manage:
+Run terraform init to initialize your Terraform configuration and terraform apply to deploy your resources. Monitor your Azure resources and adjust your Terraform configuration as needed.
+Remember to replace placeholder values like admin_username, admin_password, and var.alert_emails with your actual configuration details. This script sets up the SQL Server, databases, Azure Monitor alerts, and an action group for email notifications upon reaching utilization thresholds. Adjust the alert criteria and actions according to your specific requirements.
