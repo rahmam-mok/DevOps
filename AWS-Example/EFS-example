@@ -1,0 +1,148 @@
+To create an Amazon Elastic File System (EFS) named `pftcdev`, mount it on a RHEL8 server, and use an existing VPC named `nonprodvpc` and existing subnets in multiple availability zones, you can follow the Terraform script below. This script will create an EFS file system, mount targets in multiple AZs, and an EC2 instance that mounts the EFS file system.
+
+### 1. Main Terraform Configuration File (`main.tf`)
+
+```hcl
+provider "aws" {
+  region = "us-west-2"  # Change this to your preferred region
+}
+
+# Data source to fetch existing VPC
+data "aws_vpc" "nonprodvpc" {
+  filter {
+    name   = "tag:Name"
+    values = ["nonprodvpc"]
+  }
+}
+
+# Data source to fetch existing Subnets in multiple AZs
+data "aws_subnets" "nonprodsubnets" {
+  filter {
+    name   = "tag:Name"
+    values = ["nonprodsubnet"]
+  }
+
+  vpc_id = data.aws_vpc.nonprodvpc.id
+}
+
+# Create Security Group for EFS
+resource "aws_security_group" "efs_sg" {
+  vpc_id = data.aws_vpc.nonprodvpc.id
+
+  ingress {
+    from_port   = 2049
+    to_port     = 2049
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "efs-sg"
+  }
+}
+
+# Create EFS File System
+resource "aws_efs_file_system" "pftcdev" {
+  lifecycle_policy {
+    transition_to_ia = "AFTER_30_DAYS"  # Files not accessed for 30 days will be transitioned to the IA storage class
+  }
+
+  tags = {
+    Name = "pftcdev"
+  }
+}
+
+# Create EFS Mount Targets in each subnet
+resource "aws_efs_mount_target" "main" {
+  count = length(data.aws_subnets.nonprodsubnets.ids)
+
+  file_system_id  = aws_efs_file_system.pftcdev.id
+  subnet_id       = data.aws_subnets.nonprodsubnets.ids[count.index]
+  security_groups = [aws_security_group.efs_sg.id]
+}
+
+# Create EC2 Instance in the first subnet
+resource "aws_instance" "rhel8" {
+  ami           = "ami-0a887e401f7654935"  # Change this to your preferred RHEL8 AMI
+  instance_type = "t2.micro"
+  subnet_id     = data.aws_subnets.nonprodsubnets.ids[0]
+  security_groups = [aws_security_group.efs_sg.id]
+
+  user_data = <<-EOF
+              #!/bin/bash
+              yum install -y amazon-efs-utils
+              mkdir -p /mnt/efs
+              mount -t efs ${aws_efs_file_system.pftcdev.id}:/ /mnt/efs
+              EOF
+
+  tags = {
+    Name = "rhel8-efs-client"
+  }
+}
+
+# Output EFS DNS Name
+output "efs_dns_name" {
+  value = aws_efs_file_system.pftcdev.dns_name
+}
+```
+
+### 2. Terraform Variables File (`variables.tf`)
+
+Define any variables you want to use. Here’s an example:
+
+```hcl
+variable "aws_region" {
+  description = "The AWS region to create resources in"
+  default     = "us-west-2"
+}
+```
+
+### 3. Terraform Outputs File (`outputs.tf`)
+
+Define any outputs you want to see after applying your Terraform scripts:
+
+```hcl
+output "instance_id" {
+  description = "The ID of the RHEL8 instance"
+  value       = aws_instance.rhel8.id
+}
+
+output "efs_id" {
+  description = "The ID of the EFS file system"
+  value       = aws_efs_file_system.pftcdev.id
+}
+
+output "efs_dns_name" {
+  description = "The DNS name of the EFS file system"
+  value       = aws_efs_file_system.pftcdev.dns_name
+}
+```
+
+### Steps to Apply the Terraform Script
+
+1. **Initialize Terraform**: Run `terraform init` to initialize the Terraform working directory.
+2. **Plan the Deployment**: Run `terraform plan` to create an execution plan.
+3. **Apply the Deployment**: Run `terraform apply` to apply the changes required to reach the desired state of the configuration.
+
+```sh
+terraform init
+terraform plan
+terraform apply
+```
+
+This script does the following:
+1. Fetches the existing VPC named `nonprodvpc`.
+2. Fetches the existing subnets tagged `nonprodsubnet` within the VPC.
+3. Creates a security group for the EFS mount targets.
+4. Creates an EFS file system named `pftcdev`.
+5. Creates EFS mount targets in each of the fetched subnets (one per AZ).
+6. Launches a RHEL8 EC2 instance in the first subnet and mounts the EFS file system to `/mnt/efs` using a user data script.
+
+Ensure you adjust the region, AMI ID, and other variables as necessary for your environment.
