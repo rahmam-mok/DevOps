@@ -1,0 +1,128 @@
+To create a highly available and scalable Redis cluster with multiple availability zones and replication using Terraform, you should use the `aws_elasticache_replication_group` resource. This resource allows you to set up a Redis cluster with primary and replica nodes distributed across multiple availability zones.
+
+Below is a comprehensive Terraform script to create a Redis replication group with the specified configurations.
+
+### Terraform Script
+
+Create a file named `main.tf` and add the following content:
+
+```hcl
+provider "aws" {
+  region = "us-west-2"  # Change to your desired AWS region
+}
+
+# Data source to get existing VPC
+data "aws_vpc" "pftcdev_vpc" {
+  filter {
+    name   = "tag:Name"
+    values = ["pftcdevVpc"]
+  }
+}
+
+# Data source to get existing Subnet
+data "aws_subnet" "pftcdev_subnet" {
+  filter {
+    name   = "tag:Name"
+    values = ["pftcdev subnet"]
+  }
+
+  vpc_id = data.aws_vpc.pftcdev_vpc.id
+}
+
+# Data source to get availability zones
+data "aws_availability_zones" "available" {}
+
+# Security Group for ElastiCache
+resource "aws_security_group" "redis_sg" {
+  name        = "redis_sg"
+  description = "Security group for Redis replication group"
+  vpc_id      = data.aws_vpc.pftcdev_vpc.id
+
+  ingress {
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Adjust according to your security needs
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# ElastiCache Subnet Group
+resource "aws_elasticache_subnet_group" "pftdev_subnet_group" {
+  name       = "pftdev_subnet_group"
+  subnet_ids = [data.aws_subnet.pftcdev_subnet.id]
+}
+
+# ElastiCache Replication Group
+resource "aws_elasticache_replication_group" "pftdev" {
+  replication_group_id          = "pftdev"
+  replication_group_description = "Redis replication group for pftdev"
+  node_type                     = "cache.t3.micro"  # Adjust according to your needs
+  number_cache_clusters         = 2  # One primary and one replica
+  automatic_failover_enabled    = true
+  subnet_group_name             = aws_elasticache_subnet_group.pftdev_subnet_group.name
+  security_group_ids            = [aws_security_group.redis_sg.id]
+
+  availability_zones = data.aws_availability_zones.available.names
+
+  depends_on = [
+    aws_elasticache_subnet_group.pftdev_subnet_group,
+    aws_security_group.redis_sg
+  ]
+}
+```
+
+### Explanation
+
+1. **Provider Configuration:**
+   - Specifies the AWS region.
+
+2. **Data Source for VPC:**
+   - Fetches the existing VPC by its name tag.
+
+3. **Data Source for Subnet:**
+   - Fetches the existing subnet by its name tag and VPC ID.
+
+4. **Data Source for Availability Zones:**
+   - Retrieves the list of availability zones in the specified region.
+
+5. **Security Group:**
+   - Creates a security group allowing inbound and outbound traffic on port 6379 (Redis default port). Adjust CIDR blocks according to your security requirements.
+
+6. **ElastiCache Subnet Group:**
+   - Creates a subnet group for ElastiCache using the existing subnet.
+
+7. **ElastiCache Replication Group:**
+   - Creates a Redis replication group with the specified configurations:
+     - `replication_group_id`: The identifier for the replication group.
+     - `node_type`: The instance type for the nodes.
+     - `number_cache_clusters`: Number of cache clusters (nodes) in the replication group (one primary and one replica).
+     - `automatic_failover_enabled`: Enables automatic failover to promote a read replica to primary if the primary node fails.
+     - `subnet_group_name`: Uses the previously created subnet group.
+     - `security_group_ids`: Attaches the security group created earlier.
+     - `availability_zones`: Specifies the availability zones to distribute the nodes across multiple zones for high availability.
+
+### Steps to Deploy
+
+1. **Initialize Terraform:**
+   ```sh
+   terraform init
+   ```
+
+2. **Plan the deployment:**
+   ```sh
+   terraform plan
+   ```
+
+3. **Apply the configuration:**
+   ```sh
+   terraform apply
+   ```
+
+This script will set up a Redis replication group named `pftdev`, with nodes distributed across multiple availability zones, ensuring high availability and fault tolerance. Adjust the instance types, number of nodes, and security settings as needed for your specific requirements.
