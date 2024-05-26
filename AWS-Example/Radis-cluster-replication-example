@@ -1,0 +1,56 @@
+The `num_cache_nodes` parameter in an AWS ElastiCache for Redis Terraform resource specifies the number of cache nodes in the cluster. This parameter is used to define the cluster's scale and capacity.
+
+### Redis Cluster Configuration
+
+- **Single-Node Configuration:** If you set `num_cache_nodes` to 1, you will have a single Redis instance without replication.
+- **Replication Group:** For high availability and read scalability, you typically use a Redis replication group instead of setting `num_cache_nodes` to more than 1 in a single cluster. In a replication group, you can have one primary node and multiple read replicas.
+
+### Usage
+
+In the context of a standalone Redis instance, `num_cache_nodes` is usually set to 1. However, if you're configuring a Redis (cluster mode enabled) cluster, this parameter would specify the number of shards in the cluster.
+
+### Example
+
+Here's an example with `num_cache_nodes` set to 1 for a single-node Redis cluster:
+
+```hcl
+resource "aws_elasticache_cluster" "pftdev" {
+  cluster_id           = "pftdev"
+  engine               = "redis"
+  node_type            = "cache.t3.micro"
+  num_cache_nodes      = 1
+  parameter_group_name = "default.redis5.0"
+  subnet_group_name    = aws_elasticache_subnet_group.pftdev_subnet_group.name
+  security_group_ids   = [aws_security_group.redis_sg.id]
+}
+```
+
+### Important Considerations
+
+1. **Redis (Cluster Mode Disabled):** For a single-node or primary/replica configuration, you typically manage the replication group separately and do not set `num_cache_nodes` directly in the cluster resource.
+2. **Redis (Cluster Mode Enabled):** When using Redis Cluster (which supports partitioning data across multiple nodes), `num_cache_nodes` can specify the number of shards.
+
+For a more robust and highly available setup, you would generally use the `aws_elasticache_replication_group` resource instead of `aws_elasticache_cluster`.
+
+### Example of a Replication Group
+
+Here is an example using the `aws_elasticache_replication_group` resource:
+
+```hcl
+resource "aws_elasticache_replication_group" "pftdev" {
+  replication_group_id          = "pftdev"
+  replication_group_description = "Redis replication group for pftdev"
+  node_type                     = "cache.t3.micro"
+  number_cache_clusters         = 2  # One primary and one replica
+  automatic_failover_enabled    = true
+  subnet_group_name             = aws_elasticache_subnet_group.pftdev_subnet_group.name
+  security_group_ids            = [aws_security_group.redis_sg.id]
+
+  depends_on = [
+    aws_elasticache_subnet_group.pftdev_subnet_group,
+    aws_security_group.redis_sg
+  ]
+}
+```
+
+This example creates a Redis replication group with one primary node and one replica for high availability. Adjust the `number_cache_clusters` and other parameters according to your needs.
