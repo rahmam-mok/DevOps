@@ -1,0 +1,138 @@
+To create an Amazon Elastic File System (EFS) named `pftcdev` and mount it on a RHEL8 server within an existing VPC named `nonprodvpc` and an existing subnet named `nonprodsubnet`, you need to modify the Terraform script to reference these existing resources. Here’s how you can achieve this:
+
+### 1. Main Terraform Configuration File (`main.tf`)
+
+```hcl
+provider "aws" {
+  region = "us-west-2" # change this to your preferred region
+}
+
+# Data source to fetch existing VPC
+data "aws_vpc" "nonprodvpc" {
+  filter {
+    name   = "tag:Name"
+    values = ["nonprodvpc"]
+  }
+}
+
+# Data source to fetch existing Subnet
+data "aws_subnet" "nonprodsubnet" {
+  filter {
+    name   = "tag:Name"
+    values = ["nonprodsubnet"]
+  }
+
+  vpc_id = data "aws_vpc" "nonprodvpc".id
+}
+
+# Create Security Group for EFS
+resource "aws_security_group" "efs_sg" {
+  vpc_id = data "aws_vpc" "nonprodvpc".id
+
+  ingress {
+    from_port   = 2049
+    to_port     = 2049
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "efs-sg"
+  }
+}
+
+# Create EFS File System
+resource "aws_efs_file_system" "pftcdev" {
+  lifecycle_policy {
+    transition_to_ia = "AFTER_30_DAYS"
+  }
+
+  tags = {
+    Name = "pftcdev"
+  }
+}
+
+# Create EFS Mount Target
+resource "aws_efs_mount_target" "main" {
+  file_system_id  = aws_efs_file_system.pftcdev.id
+  subnet_id       = data "aws_subnet" "nonprodsubnet".id
+  security_groups = [aws_security_group.efs_sg.id]
+}
+
+# Create EC2 Instance
+resource "aws_instance" "rhel8" {
+  ami           = "ami-0a887e401f7654935" # change this to your preferred RHEL8 AMI
+  instance_type = "t2.micro"
+  subnet_id     = data "aws_subnet" "nonprodsubnet".id
+  security_groups = [aws_security_group.efs_sg.id]
+
+  user_data = <<-EOF
+              #!/bin/bash
+              yum install -y amazon-efs-utils
+              mkdir -p /mnt/efs
+              mount -t efs ${aws_efs_file_system.pftcdev.id}:/ /mnt/efs
+              EOF
+
+  tags = {
+    Name = "rhel8-efs-client"
+  }
+}
+
+# Output EFS DNS Name
+output "efs_dns_name" {
+  value = aws_efs_file_system.pftcdev.dns_name
+}
+```
+
+### 2. Terraform Variables File (`variables.tf`)
+
+Define any variables you want to use. Here’s an example:
+
+```hcl
+variable "aws_region" {
+  description = "The AWS region to create resources in"
+  default     = "us-west-2"
+}
+```
+
+### 3. Terraform Outputs File (`outputs.tf`)
+
+Define any outputs you want to see after applying your Terraform scripts:
+
+```hcl
+output "instance_id" {
+  description = "The ID of the RHEL8 instance"
+  value       = aws_instance.rhel8.id
+}
+
+output "efs_id" {
+  description = "The ID of the EFS file system"
+  value       = aws_efs_file_system.pftcdev.id
+}
+
+output "efs_dns_name" {
+  description = "The DNS name of the EFS file system"
+  value       = aws_efs_file_system.pftcdev.dns_name
+}
+```
+
+### Steps to Apply the Terraform Script
+
+1. **Initialize Terraform**: Run `terraform init` to initialize the Terraform working directory.
+2. **Plan the Deployment**: Run `terraform plan` to create an execution plan.
+3. **Apply the Deployment**: Run `terraform apply` to apply the changes required to reach the desired state of the configuration.
+
+```sh
+terraform init
+terraform plan
+terraform apply
+```
+
+This script will create an EFS file system named `pftcdev`, set up a security group, and launch an EC2 instance running RHEL8. The EFS file system will be mounted to the EC2 instance using the user data script. The script references the existing VPC `nonprodvpc` and the existing subnet `nonprodsubnet`. Adjust the AMI ID, region, and other variables as necessary for your environment.
