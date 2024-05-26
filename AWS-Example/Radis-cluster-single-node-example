@@ -1,0 +1,96 @@
+To create a serverless Redis cluster (Amazon ElastiCache for Redis) using Terraform, and to place it in an existing subnet and VPC, you can follow these steps. Below is a Terraform script example that does this.
+
+### Prerequisites
+1. Ensure you have Terraform installed.
+2. Ensure you have AWS CLI configured with appropriate permissions.
+3. Ensure you have an existing subnet (`pftcdev subnet`) and VPC (`pftcdevVpc`).
+
+### Terraform Script
+
+Create a file named `main.tf` and add the following content:
+
+```hcl
+provider "aws" {
+  region = "us-west-2"  # Change to your desired AWS region
+}
+
+# Data source to get existing VPC
+data "aws_vpc" "pftcdev_vpc" {
+  filter {
+    name   = "tag:Name"
+    values = ["pftcdevVpc"]
+  }
+}
+
+# Data source to get existing Subnet
+data "aws_subnet" "pftcdev_subnet" {
+  filter {
+    name   = "tag:Name"
+    values = ["pftcdev subnet"]
+  }
+
+  vpc_id = data.aws_vpc.pftcdev_vpc.id
+}
+
+# Security Group for ElastiCache
+resource "aws_security_group" "redis_sg" {
+  name        = "redis_sg"
+  description = "Security group for serverless Redis"
+  vpc_id      = data.aws_vpc.pftcdev_vpc.id
+
+  ingress {
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Adjust according to your security needs
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# ElastiCache Redis Cluster
+resource "aws_elasticache_cluster" "pftdev" {
+  cluster_id           = "pftdev"
+  engine               = "redis"
+  node_type            = "cache.t3.micro"  # Change to your preferred node type
+  num_cache_nodes      = 1
+  parameter_group_name = "default.redis5.0"  # Use the appropriate parameter group
+  subnet_group_name    = aws_elasticache_subnet_group.pftdev_subnet_group.name
+  security_group_ids   = [aws_security_group.redis_sg.id]
+}
+
+# ElastiCache Subnet Group
+resource "aws_elasticache_subnet_group" "pftdev_subnet_group" {
+  name       = "pftdev_subnet_group"
+  subnet_ids = [data.aws_subnet.pftcdev_subnet.id]
+
+  depends_on = [
+    data.aws_vpc.pftcdev_vpc,
+    data.aws_subnet.pftcdev_subnet
+  ]
+}
+```
+
+### Steps to Deploy
+
+1. **Initialize Terraform:**
+   ```sh
+   terraform init
+   ```
+
+2. **Plan the deployment:**
+   ```sh
+   terraform plan
+   ```
+
+3. **Apply the configuration:**
+   ```sh
+   terraform apply
+   ```
+
+This script will create a Redis cluster named `pftdev` in the specified existing subnet and VPC. Ensure the security group rules and instance types are appropriate for your use case and adjust them accordingly.
