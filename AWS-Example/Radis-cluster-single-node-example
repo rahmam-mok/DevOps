@@ -88,6 +88,63 @@ resource "aws_elasticache_subnet_group" "pftdev_subnet_group" {
    terraform plan
    ```
 
+
+In the context of AWS ElastiCache for Redis, `node_type` refers to the instance type of the cache nodes within your ElastiCache cluster. Instance types determine the compute, memory, and networking capacity of the nodes. AWS provides a variety of instance types tailored to different performance and cost needs.
+
+Here are some examples of common node types for ElastiCache:
+
+1. **General Purpose** (T2, T3):
+   - `cache.t2.micro`
+   - `cache.t2.small`
+   - `cache.t2.medium`
+   - `cache.t3.micro`
+   - `cache.t3.small`
+   - `cache.t3.medium`
+
+2. **Compute Optimized** (C1):
+   - `cache.c1.xlarge`
+
+3. **Memory Optimized** (R5, R6g, R6gd, R4, M5, M6g):
+   - `cache.r5.large`
+   - `cache.r5.xlarge`
+   - `cache.r5.2xlarge`
+   - `cache.r5.4xlarge`
+   - `cache.r5.12xlarge`
+   - `cache.r5.24xlarge`
+   - `cache.r6g.large`
+   - `cache.r6g.xlarge`
+   - `cache.r6g.2xlarge`
+   - `cache.r6g.4xlarge`
+   - `cache.r6g.12xlarge`
+   - `cache.r6g.24xlarge`
+   - `cache.r6gd.xlarge`
+   - `cache.r6gd.2xlarge`
+   - `cache.r6gd.4xlarge`
+   - `cache.r6gd.12xlarge`
+   - `cache.r6gd.24xlarge`
+   - `cache.r4.large`
+   - `cache.r4.xlarge`
+   - `cache.r4.2xlarge`
+   - `cache.r4.4xlarge`
+   - `cache.r4.8xlarge`
+   - `cache.r4.16xlarge`
+   - `cache.m5.large`
+   - `cache.m5.xlarge`
+   - `cache.m5.2xlarge`
+   - `cache.m5.4xlarge`
+   - `cache.m5.12xlarge`
+   - `cache.m5.24xlarge`
+   - `cache.m6g.large`
+   - `cache.m6g.xlarge`
+   - `cache.m6g.2xlarge`
+   - `cache.m6g.4xlarge`
+   - `cache.m6g.12xlarge`
+   - `cache.m6g.24xlarge`
+
+These instances are categorized based on their balance of compute, memory, and networking resources. General purpose instances are suitable for most use cases, compute optimized instances are ideal for CPU-intensive tasks, and memory optimized instances are designed for workloads requiring large amounts of memory.
+
+When selecting a `node_type`, consider your application's performance requirements and cost constraints. You can find detailed specifications and pricing for each instance type in the [AWS ElastiCache Pricing](https://aws.amazon.com/elasticache/pricing/) documentation.
+
 3. **Apply the configuration:**
    ```sh
    terraform apply
