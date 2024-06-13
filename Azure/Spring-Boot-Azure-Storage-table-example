@@ -1,0 +1,133 @@
+To connect to Azure Storage Table using a service principal (client ID and client secret) in a Spring Boot application, you can use the Azure SDK for Java. Below is a step-by-step guide to help you set up the connection:
+
+1. **Add dependencies:**
+
+   Ensure you have the required Azure SDK dependencies in your `pom.xml` file. Add the following dependencies:
+
+   ```xml
+   <dependency>
+       <groupId>com.azure</groupId>
+       <artifactId>azure-identity</artifactId>
+       <version>1.4.1</version>
+   </dependency>
+   <dependency>
+       <groupId>com.azure</groupId>
+       <artifactId>azure-data-tables</artifactId>
+       <version>12.1.0</version>
+   </dependency>
+   ```
+
+2. **Configure application properties:**
+
+   Add your Azure AD credentials to your `application.properties` file:
+
+   ```properties
+   azure.client-id=your-client-id
+   azure.client-secret=your-client-secret
+   azure.tenant-id=your-tenant-id
+   azure.table-storage-endpoint=https://your-storage-account.table.core.windows.net
+   azure.table-name=your-table-name
+   ```
+
+3. **Create a configuration class:**
+
+   Create a configuration class to set up the Azure Table Client:
+
+   ```java
+   import com.azure.data.tables.TableClient;
+   import com.azure.data.tables.TableClientBuilder;
+   import com.azure.identity.ClientSecretCredential;
+   import com.azure.identity.ClientSecretCredentialBuilder;
+   import org.springframework.beans.factory.annotation.Value;
+   import org.springframework.context.annotation.Bean;
+   import org.springframework.context.annotation.Configuration;
+
+   @Configuration
+   public class AzureTableConfig {
+
+       @Value("${azure.client-id}")
+       private String clientId;
+
+       @Value("${azure.client-secret}")
+       private String clientSecret;
+
+       @Value("${azure.tenant-id}")
+       private String tenantId;
+
+       @Value("${azure.table-storage-endpoint}")
+       private String tableStorageEndpoint;
+
+       @Value("${azure.table-name}")
+       private String tableName;
+
+       @Bean
+       public TableClient tableClient() {
+           ClientSecretCredential credential = new ClientSecretCredentialBuilder()
+                   .clientId(clientId)
+                   .clientSecret(clientSecret)
+                   .tenantId(tenantId)
+                   .build();
+
+           return new TableClientBuilder()
+                   .credential(credential)
+                   .endpoint(tableStorageEndpoint)
+                   .tableName(tableName)
+                   .buildClient();
+       }
+   }
+   ```
+
+4. **Use the TableClient in your service:**
+
+   Inject the `TableClient` bean into your service class and use it to interact with Azure Table Storage:
+
+   ```java
+   import com.azure.data.tables.TableClient;
+   import com.azure.data.tables.models.TableEntity;
+   import org.springframework.beans.factory.annotation.Autowired;
+   import org.springframework.stereotype.Service;
+
+   @Service
+   public class AzureTableService {
+
+       @Autowired
+       private TableClient tableClient;
+
+       public void createEntity(TableEntity entity) {
+           tableClient.createEntity(entity);
+       }
+
+       public TableEntity getEntity(String partitionKey, String rowKey) {
+           return tableClient.getEntity(partitionKey, rowKey);
+       }
+
+       // Add more methods to interact with your table storage as needed
+   }
+   ```
+
+5. **Example of an entity class:**
+
+   You can define an entity class that represents the data in your table:
+
+   ```java
+   import com.azure.data.tables.models.TableEntity;
+   import com.azure.data.tables.models.TableEntityProperty;
+
+   public class YourEntity extends TableEntity {
+       public YourEntity(String partitionKey, String rowKey) {
+           super(partitionKey, rowKey);
+       }
+
+       public String getSomeProperty() {
+           return this.getProperties().get("SomeProperty").toString();
+       }
+
+       public void setSomeProperty(String value) {
+           this.getProperties().put("SomeProperty", new TableEntityProperty(value));
+       }
+
+       // Add more properties and methods as needed
+   }
+   ```
+
+With these steps, you should be able to connect to Azure Table Storage using a service principal in your Spring Boot application. Make sure to replace the placeholder values with your actual Azure credentials and table details.
