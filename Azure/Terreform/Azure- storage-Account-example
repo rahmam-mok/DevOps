@@ -1,0 +1,124 @@
+To create an Azure Storage Account, Blob Container, and Storage Table, and then assign roles to an Azure service principal and an Azure AD group using Terraform, you'll need to extend your configuration to include the necessary role assignments. Below is the complete configuration:
+
+### 1. Provider Configuration
+Create a file named `provider.tf` for Azure provider configuration:
+
+```hcl
+# provider.tf
+provider "azurerm" {
+  features {}
+}
+```
+
+### 2. Storage Account Configuration
+Create a file named `main.tf` for the storage account, blob container, storage table, and role assignments:
+
+```hcl
+# main.tf
+resource "azurerm_resource_group" "example" {
+  name     = "example-resources"
+  location = "East US"
+}
+
+resource "azurerm_storage_account" "pftcdev" {
+  name                     = "pftcdev"
+  resource_group_name      = azurerm_resource_group.example.name
+  location                 = azurerm_resource_group.example.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_storage_container" "pftcdevcontainer" {
+  name                  = "pftcdevcontainer"
+  storage_account_name  = azurerm_storage_account.pftcdev.name
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_table" "pftctable" {
+  name                 = "pftctable"
+  storage_account_name = azurerm_storage_account.pftcdev.name
+}
+
+resource "azurerm_role_assignment" "sp_blob_storage_contributor" {
+  principal_id   = data.azurerm_client_config.example.object_id
+  role_definition_name = "Storage Blob Data Contributor"
+  scope          = azurerm_storage_account.pftcdev.id
+}
+
+resource "azurerm_role_assignment" "sp_table_storage_contributor" {
+  principal_id   = data.azurerm_client_config.example.object_id
+  role_definition_name = "Storage Table Data Contributor"
+  scope          = azurerm_storage_account.pftcdev.id
+}
+
+resource "azurerm_role_assignment" "adgroup_blob_storage_contributor" {
+  principal_id   = data.azurerm_ad_group.pftcadmin.object_id
+  role_definition_name = "Storage Blob Data Contributor"
+  scope          = azurerm_storage_account.pftcdev.id
+}
+
+resource "azurerm_role_assignment" "adgroup_table_storage_contributor" {
+  principal_id   = data.azurerm_ad_group.pftcadmin.object_id
+  role_definition_name = "Storage Table Data Contributor"
+  scope          = azurerm_storage_account.pftcdev.id
+}
+```
+
+### 3. Data Configuration
+Create a file named `data.tf` to fetch information about the service principal and AD group:
+
+```hcl
+# data.tf
+data "azurerm_client_config" "example" {}
+
+data "azurerm_ad_group" "pftcadmin" {
+  display_name = "pftcadmin"
+}
+
+data "azurerm_client_config" "sp_pftcdev" {
+  client_id = "your-service-principal-client-id"
+}
+```
+
+### 4. Output Configuration
+Create a file named `outputs.tf` to output the resource information:
+
+```hcl
+# outputs.tf
+output "storage_account_name" {
+  value = azurerm_storage_account.pftcdev.name
+}
+
+output "storage_container_name" {
+  value = azurerm_storage_container.pftcdevcontainer.name
+}
+
+output "storage_table_name" {
+  value = azurerm_storage_table.pftctable.name
+}
+```
+
+### Steps to Apply Terraform Configuration
+1. **Initialize Terraform**: Initialize Terraform in your project directory:
+   ```sh
+   terraform init
+   ```
+
+2. **Plan the Deployment**: Generate an execution plan:
+   ```sh
+   terraform plan
+   ```
+
+3. **Apply the Deployment**: Apply the execution plan to create the resources:
+   ```sh
+   terraform apply
+   ```
+
+Make sure you replace `"your-service-principal-client-id"` with the actual client ID of your service principal.
+
+This configuration will:
+- Create an Azure Storage Account named `pftcdev`
+- Create a Blob Container named `pftcdevcontainer`
+- Create a Storage Table named `pftctable`
+- Assign the `Storage Blob Data Contributor` role to the specified service principal and AD group
+- Assign the `Storage Table Data Contributor` role to the specified service principal and AD group
