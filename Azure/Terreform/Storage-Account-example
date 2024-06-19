@@ -1,0 +1,83 @@
+ Below is the complete Terraform configuration to create an Azure Storage Account named `pftcdev`, a Blob Container named `pftcdevcontainer`, and a Storage Table named `pftctable`.
+
+### 1. Provider Configuration
+Create a file named `provider.tf` for Azure provider configuration:
+
+```hcl
+# provider.tf
+provider "azurerm" {
+  features {}
+}
+```
+
+### 2. Storage Account Configuration
+Create a file named `main.tf` for the storage account and related resources:
+
+```hcl
+# main.tf
+resource "azurerm_resource_group" "example" {
+  name     = "example-resources"
+  location = "East US"
+}
+
+resource "azurerm_storage_account" "pftcdev" {
+  name                     = "pftcdev"
+  resource_group_name      = azurerm_resource_group.example.name
+  location                 = azurerm_resource_group.example.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_storage_container" "pftcdevcontainer" {
+  name                  = "pftcdevcontainer"
+  storage_account_name  = azurerm_storage_account.pftcdev.name
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_table" "pftctable" {
+  name                 = "pftctable"
+  storage_account_name = azurerm_storage_account.pftcdev.name
+}
+```
+
+### 3. Output Configuration
+Create a file named `outputs.tf` to output the resource information:
+
+```hcl
+# outputs.tf
+output "storage_account_name" {
+  value = azurerm_storage_account.pftcdev.name
+}
+
+output "storage_container_name" {
+  value = azurerm_storage_container.pftcdevcontainer.name
+}
+
+output "storage_table_name" {
+  value = azurerm_storage_table.pftctable.name
+}
+```
+
+### Steps to Apply Terraform Configuration
+1. **Initialize Terraform**: Initialize Terraform in your project directory:
+   ```sh
+   terraform init
+   ```
+
+2. **Plan the Deployment**: Generate an execution plan:
+   ```sh
+   terraform plan
+   ```
+
+3. **Apply the Deployment**: Apply the execution plan to create the resources:
+   ```sh
+   terraform apply
+   ```
+
+This configuration will create:
+- An Azure Resource Group named `example-resources`
+- A Storage Account named `pftcdev`
+- A Blob Container named `pftcdevcontainer`
+- A Storage Table named `pftctable`
+
+You can customize the resource group name and location in the `main.tf` file as needed. This setup assumes you have the necessary permissions and Azure CLI configured on your machine to authenticate and execute these Terraform scripts.
