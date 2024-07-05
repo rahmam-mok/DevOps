@@ -1,0 +1,163 @@
+To add or update firewall rules for existing Azure Storage accounts using Terraform, you can use the `azurerm_storage_account_network_rules` resource. This resource allows you to define network rules for a storage account, including IP rules and virtual network rules.
+
+Here's how you can do it:
+
+### Step 1: Provider Configuration
+First, configure the Azure provider.
+
+```hcl
+# provider.tf
+provider "azurerm" {
+  features {}
+}
+```
+
+### Step 2: Variables
+Define variables for the existing storage account and the firewall rules.
+
+```hcl
+# variables.tf
+variable "storage_account_name" {
+  description = "The name of the existing storage account"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "The name of the resource group containing the storage account"
+  type        = string
+}
+
+variable "allowed_ip_addresses" {
+  description = "List of allowed IP addresses"
+  type        = list(string)
+  default     = []
+}
+
+variable "virtual_network_subnet_ids" {
+  description = "List of subnet IDs for virtual network rules"
+  type        = list(string)
+  default     = []
+}
+```
+
+### Step 3: Storage Account Network Rules
+Define the network rules for the storage account.
+
+```hcl
+# network_rules.tf
+resource "azurerm_storage_account_network_rules" "example" {
+  storage_account_name   = var.storage_account_name
+  resource_group_name    = var.resource_group_name
+
+  dynamic "ip_rule" {
+    for_each = var.allowed_ip_addresses
+    content {
+      ip_address_or_range = ip_rule.value
+    }
+  }
+
+  dynamic "virtual_network_subnet_id" {
+    for_each = var.virtual_network_subnet_ids
+    content {
+      virtual_network_subnet_id = virtual_network_subnet_id.value
+    }
+  }
+
+  default_action = "Deny"
+}
+```
+
+### Step 4: Outputs
+Optionally, define outputs to get the details of the storage account.
+
+```hcl
+# outputs.tf
+output "storage_account_name" {
+  value = var.storage_account_name
+}
+
+output "resource_group_name" {
+  value = var.resource_group_name
+}
+```
+
+### Step 5: Terraform Initialization and Apply
+Initialize Terraform and apply the configuration.
+
+```sh
+terraform init
+terraform apply
+```
+
+### Example Terraform Configuration File
+Here is an example configuration file where you might pass the variables:
+
+```hcl
+# terraform.tfvars
+storage_account_name     = "yourstorageaccountname"  # Replace with your storage account name
+resource_group_name      = "yourresourcegroupname"   # Replace with your resource group name
+allowed_ip_addresses     = ["192.168.1.1", "192.168.1.2"]  # Replace with your allowed IP addresses
+virtual_network_subnet_ids = ["subnet-id1", "subnet-id2"]  # Replace with your subnet IDs
+```
+
+### Full Example
+Here is the complete example in a single Terraform configuration file:
+
+```hcl
+provider "azurerm" {
+  features {}
+}
+
+variable "storage_account_name" {
+  description = "The name of the existing storage account"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "The name of the resource group containing the storage account"
+  type        = string
+}
+
+variable "allowed_ip_addresses" {
+  description = "List of allowed IP addresses"
+  type        = list(string)
+  default     = []
+}
+
+variable "virtual_network_subnet_ids" {
+  description = "List of subnet IDs for virtual network rules"
+  type        = list(string)
+  default     = []
+}
+
+resource "azurerm_storage_account_network_rules" "example" {
+  storage_account_name   = var.storage_account_name
+  resource_group_name    = var.resource_group_name
+
+  dynamic "ip_rule" {
+    for_each = var.allowed_ip_addresses
+    content {
+      ip_address_or_range = ip_rule.value
+    }
+  }
+
+  dynamic "virtual_network_subnet_id" {
+    for_each = var.virtual_network_subnet_ids
+    content {
+      virtual_network_subnet_id = virtual_network_subnet_id.value
+    }
+  }
+
+  default_action = "Deny"
+}
+
+output "storage_account_name" {
+  value = var.storage_account_name
+}
+
+output "resource_group_name" {
+  value = var.resource_group_name
+}
+```
+
+This configuration updates the network rules of an existing Azure Storage account by adding allowed IP addresses and virtual network subnets. Adjust the `default_action` as needed to either `Allow` or `Deny` based on your requirements.
