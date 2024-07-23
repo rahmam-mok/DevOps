@@ -1,0 +1,118 @@
+pipeline {
+    agent any
+
+    environment {
+        // Replace with your actual MS Teams Webhook URL
+        TEAMS_WEBHOOK_URL = 'https://outlook.office.com/webhook/your-webhook-url'
+    }
+
+    options {
+        timestamps() // This option adds timestamps to the log
+    }
+
+    stages {
+        stage('Initialize') {
+            steps {
+                script {
+                    def message = """{
+                        "text": "Build Started: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                    }"""
+                    httpRequest(
+                        url: "${env.TEAMS_WEBHOOK_URL}",
+                        httpMode: 'POST',
+                        contentType: 'APPLICATION_JSON',
+                        requestBody: message
+                    )
+                }
+            }
+        }
+        stage('Build') {
+            steps {
+                echo 'Building...'
+                // Your build steps here
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'Testing...'
+                // Your test steps here
+            }
+        }
+        stage('Deploy') {
+            steps {
+                echo 'Deploying...'
+                // Your deploy steps here
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                def message = """{
+                    "text": "Build Complete: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                }"""
+                httpRequest(
+                    url: "${env.TEAMS_WEBHOOK_URL}",
+                    httpMode: 'POST',
+                    contentType: 'APPLICATION_JSON',
+                    requestBody: message
+                )
+            }
+        }
+        success {
+            script {
+                def message = """{
+                    "text": "Build Success: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                }"""
+                httpRequest(
+                    url: "${env.TEAMS_WEBHOOK_URL}",
+                    httpMode: 'POST',
+                    contentType: 'APPLICATION_JSON',
+                    requestBody: message
+                )
+            }
+        }
+        failure {
+            script {
+                def message = """{
+                    "text": "Build Failure: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                }"""
+                httpRequest(
+                    url: "${env.TEAMS_WEBHOOK_URL}",
+                    httpMode: 'POST',
+                    contentType: 'APPLICATION_JSON',
+                    requestBody: message
+                )
+            }
+        }
+        unstable {
+            script {
+                def message = """{
+                    "text": "Build Unstable: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                }"""
+                httpRequest(
+                    url: "${env.TEAMS_WEBHOOK_URL}",
+                    httpMode: 'POST',
+                    contentType: 'APPLICATION_JSON',
+                    requestBody: message
+                )
+            }
+        }
+        changed {
+            script {
+                if (currentBuild.currentResult == 'SUCCESS') {
+                    def message = """{
+                        "text": "Build Stable: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                    }"""
+                    httpRequest(
+                        url: "${env.TEAMS_WEBHOOK_URL}",
+                        httpMode: 'POST',
+                        contentType: 'APPLICATION_JSON',
+                        requestBody: message
+                    )
+                }
+            }
+        }
+    }
+}
