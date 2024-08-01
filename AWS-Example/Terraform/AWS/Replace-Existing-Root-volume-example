@@ -1,0 +1,85 @@
+
+
+1. **Create a Volume from the Snapshot**
+2. **Stop the EC2 Instance**
+3. **Detach the Existing Root Volume**
+4. **Attach the New Volume as the Root Volume**
+5. **Start the EC2 Instance**
+
+Below is a Terraform script outline that demonstrates these steps. Adjust the specifics (e.g., instance IDs, snapshot IDs, region, etc.) as necessary.
+
+```hcl
+provider "aws" {
+  region = "your-region"
+}
+
+# Data source to fetch the existing EC2 instance
+data "aws_instance" "example" {
+  instance_id = "i-yourinstanceid"
+}
+
+# Create a volume from the snapshot
+resource "aws_ebs_volume" "from_snapshot" {
+  snapshot_id = "snap-your_snapshot_id"
+  availability_zone = data.aws_instance.example.availability_zone
+  volume_type       = "gp2"  # Adjust the volume type as needed
+  tags = {
+    Name = "volume-from-snapshot"
+  }
+}
+
+# Stop the instance
+resource "aws_instance" "example_stop" {
+  instance_id = data.aws_instance.example.instance_id
+  instance_state = "stopped"
+  depends_on = [aws_ebs_volume.from_snapshot]
+}
+
+# Detach the existing root volume
+resource "aws_volume_attachment" "detach_root" {
+  device_name = data.aws_instance.example.root_device_name
+  volume_id   = data.aws_instance.example.root_block_device.volume_id
+  instance_id = data.aws_instance.example.instance_id
+  force_detach = true
+  depends_on = [aws_instance.example_stop]
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Attach the new volume as the root volume
+resource "aws_volume_attachment" "attach_new_root" {
+  device_name = data.aws_instance.example.root_device_name
+  volume_id   = aws_ebs_volume.from_snapshot.id
+  instance_id = data.aws_instance.example.instance_id
+  depends_on = [aws_volume_attachment.detach_root]
+}
+
+# Start the instance
+resource "aws_instance" "example_start" {
+  instance_id = data.aws_instance.example.instance_id
+  instance_state = "running"
+  depends_on = [aws_volume_attachment.attach_new_root]
+}
+```
+
+### Steps Explanation:
+
+1. **Create a Volume from the Snapshot**: `aws_ebs_volume` resource creates a new volume using the specified snapshot.
+
+2. **Stop the EC2 Instance**: The `aws_instance` resource with `instance_state = "stopped"` ensures the instance is stopped before detaching and attaching volumes.
+
+3. **Detach the Existing Root Volume**: The `aws_volume_attachment` resource detaches the current root volume from the EC2 instance.
+
+4. **Attach the New Volume as the Root Volume**: Another `aws_volume_attachment` resource attaches the new volume created from the snapshot as the root volume.
+
+5. **Start the EC2 Instance**: Finally, the `aws_instance` resource with `instance_state = "running"` starts the instance after the new root volume is attached.
+
+Make sure to replace placeholder values (`your-region`, `i-yourinstanceid`, `snap-your_snapshot_id`) with actual values corresponding to your AWS environment.
+
+### Note:
+- Ensure that the EC2 instance ID, snapshot ID, and region are correctly specified.
+- Make sure to have the necessary IAM permissions for creating, attaching, detaching, and stopping/starting instances.
+- Terraform will manage the state of your infrastructure, so use the appropriate Terraform commands (`terraform init`, `terraform plan`, `terraform apply`) to execute these changes.
+
+Would you like to store this information for future reference?
