@@ -1,0 +1,88 @@
+#!/bin/bash
+
+# Variables
+VOLUME_ID="your-volume-id"
+DESCRIPTION="Snapshot description"
+
+# Create snapshot
+SNAPSHOT_ID=$(aws ec2 create-snapshot --volume-id $VOLUME_ID --description "$DESCRIPTION" --query 'SnapshotId' --output text)
+
+echo "Snapshot ID: $SNAPSHOT_ID"
+
+# Wait for the snapshot to be completed
+aws ec2 wait snapshot-completed --snapshot-ids $SNAPSHOT_ID
+
+echo "Snapshot completed."
+
+# Get tags from the volume
+TAGS=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$VOLUME_ID" --query 'Tags')
+
+# Copy tags to the snapshot
+aws ec2 create-tags --resources $SNAPSHOT_ID --tags "$TAGS"
+
+echo "Tags copied to snapshot."
+
+
+
+###############
+
+#!/bin/bash
+
+# Variables
+SNAPSHOT_ID="your-snapshot-id"
+INSTANCE_ID="your-instance-id"
+AVAILABILITY_ZONE="your-availability-zone" # e.g., us-east-1a
+DEVICE_NAME="/dev/xvda" # Replace with the root device name of your instance
+
+# Create a new volume from the snapshot
+NEW_VOLUME_ID=$(aws ec2 create-volume --snapshot-id $SNAPSHOT_ID --availability-zone $AVAILABILITY_ZONE --query 'VolumeId' --output text)
+
+echo "New Volume ID: $NEW_VOLUME_ID"
+
+# Wait for the new volume to become available
+aws ec2 wait volume-available --volume-ids $NEW_VOLUME_ID
+
+echo "New volume is available."
+
+# Get tags from the snapshot
+TAGS=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$SNAPSHOT_ID" --query 'Tags')
+
+# Copy tags to the new volume
+aws ec2 create-tags --resources $NEW_VOLUME_ID --tags "$TAGS"
+
+echo "Tags copied to new volume."
+
+# Stop the instance
+aws ec2 stop-instances --instance-ids $INSTANCE_ID
+
+echo "Stopping the instance..."
+aws ec2 wait instance-stopped --instance-ids $INSTANCE_ID
+
+echo "Instance stopped."
+
+# Detach the current root volume
+ROOT_VOLUME_ID=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query 'Reservations[0].Instances[0].BlockDeviceMappings[?DeviceName==`'$DEVICE_NAME'`].Ebs.VolumeId' --output text)
+aws ec2 detach-volume --volume-id $ROOT_VOLUME_ID
+
+echo "Detaching current root volume..."
+aws ec2 wait volume-available --volume-ids $ROOT_VOLUME_ID
+
+echo "Current root volume detached."
+
+# Attach the new volume as the root volume
+aws ec2 attach-volume --volume-id $NEW_VOLUME_ID --instance-id $INSTANCE_ID --device $DEVICE_NAME
+
+echo "Attaching new volume as root..."
+aws ec2 wait volume-in-use --volume-ids $NEW_VOLUME_ID
+
+echo "New volume attached as root."
+
+# Start the instance
+aws ec2 start-instances --instance-ids $INSTANCE_ID
+
+echo "Starting the instance..."
+aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+
+echo "Instance started."
+echo "Root volume replacement completed."
+
