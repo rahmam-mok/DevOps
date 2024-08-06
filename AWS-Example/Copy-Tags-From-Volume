@@ -1,0 +1,14 @@
+
+
+### Step 1: Retrieve the Tags from the Volume
+
+```sh
+VOLUME_ID=vol-xxxxxxxxxxxxxxxxx
+TAGS=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$VOLUME_ID" --query "Tags[*].{Key:Key,Value:Value}" --output json)
+```
+
+### Step 2: Create the Snapshot and Apply the Tags
+
+```sh
+aws ec2 create-snapshot --volume-id $VOLUME_ID --tag-specifications "ResourceType=snapshot,Tags=$TAGS"
+```
