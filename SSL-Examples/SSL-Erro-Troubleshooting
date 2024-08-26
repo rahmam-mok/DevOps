@@ -1,0 +1,47 @@
+The error message you're encountering suggests that your Spring Boot application is having trouble establishing a secure HTTPS connection due to an issue with the SSL/TLS certificate validation. This specific error occurs when the Java application is unable to verify the certificate chain for the requested HTTPS target. Here's what it means and some steps you can take to resolve it:
+
+### What the Error Means:
+1. **`PKIX path building failed`**: This means that the Java application is trying to verify the certificate chain (the path from the server's certificate to a trusted root certificate) and is unable to do so.
+2. **`unable to find valid certification path to requested target`**: Java's SSL/TLS implementation (JSSE) could not find a trusted root certificate in the keystore that matches the server's certificate.
+
+### Potential Causes:
+1. **Missing or Untrusted Certificate**: The server's SSL certificate may not be trusted by the Java runtime environment because it's missing in the Java truststore (`cacerts` file).
+2. **Intermediate Certificates**: The server might be sending an incomplete certificate chain, i.e., the intermediate certificates might be missing.
+3. **Expired or Invalid Certificates**: The certificate may be expired, self-signed, or otherwise invalid.
+
+### Steps to Resolve:
+
+1. **Verify the Server Certificate**:
+   - Use tools like `openssl` or your browser to inspect the SSL certificate of the target server. Check if the certificate is properly signed by a trusted Certificate Authority (CA) and whether the full chain is being provided.
+
+2. **Add the Server's Certificate to Java Truststore**:
+   - If the certificate is valid but not trusted by Java, you can manually add it to the Java truststore:
+     ```bash
+     keytool -import -alias mycert -keystore $JAVA_HOME/jre/lib/security/cacerts -file server-cert.crt
+     ```
+     - You'll need the certificate file (e.g., `server-cert.crt`).
+     - The default password for the Java truststore is typically `changeit`.
+
+3. **Use a Custom Truststore**:
+   - If adding the certificate to the global truststore is not an option, you can create a custom truststore and configure your application to use it.
+   - Create a new truststore:
+     ```bash
+     keytool -import -alias mycert -keystore mytruststore.jks -file server-cert.crt
+     ```
+   - Configure your application to use this truststore by setting the following properties in your Spring Boot application:
+     ```properties
+     server.ssl.trust-store=classpath:mytruststore.jks
+     server.ssl.trust-store-password=yourpassword
+     ```
+
+4. **Check for Missing Intermediate Certificates**:
+   - If the server isn't providing the full chain, you'll need to ensure that all intermediate certificates are included. You can concatenate them into a single `.crt` file and add it to the truststore as shown above.
+
+5. **Upgrade or Configure JSSE (Optional)**:
+   - If you're running an older version of Java, consider upgrading to a more recent version that may have an updated truststore.
+   - Alternatively, you can configure the JVM to use an alternative truststore using the `javax.net.ssl.trustStore` system property.
+
+6. **Check Environment-Specific Issues**:
+   - If the issue only occurs in certain environments (e.g., production but not locally), there may be environment-specific configurations or network-related issues (e.g., proxy settings) affecting the SSL handshake.
+
+After performing these steps, try redeploying your Spring Boot application. If you still encounter issues, it may be useful to enable more detailed SSL debugging by adding `-Djavax.net.debug=ssl` to your JVM options, which will provide more detailed logs for troubleshooting.
