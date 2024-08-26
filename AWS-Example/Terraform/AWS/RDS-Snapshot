@@ -1,0 +1,74 @@
+You can accomplish this task using a combination of AWS CLI commands. Below is a step-by-step guide to create a snapshot of your PostgreSQL RDS instance, copy the tags from the RDS instance to the snapshot, and wait for the snapshot to be completed:
+
+### 1. **Create the Snapshot**
+Use the `create-db-snapshot` command to create a snapshot of your RDS instance.
+
+```bash
+aws rds create-db-snapshot \
+    --db-snapshot-identifier <your-snapshot-identifier> \
+    --db-instance-identifier <your-db-instance-identifier>
+```
+
+Replace `<your-snapshot-identifier>` with a unique name for the snapshot, and `<your-db-instance-identifier>` with your RDS instance identifier.
+
+### 2. **Copy Tags from RDS to Snapshot**
+First, retrieve the tags associated with your RDS instance using the `list-tags-for-resource` command.
+
+```bash
+aws rds list-tags-for-resource \
+    --resource-name arn:aws:rds:<region>:<account-id>:db:<your-db-instance-identifier>
+```
+
+Replace `<region>` with your AWS region, `<account-id>` with your AWS account ID, and `<your-db-instance-identifier>` with your RDS instance identifier.
+
+This command returns the tags in JSON format. You will need to format these tags as required by the `add-tags-to-resource` command.
+
+Then, apply the tags to the snapshot:
+
+```bash
+aws rds add-tags-to-resource \
+    --resource-name arn:aws:rds:<region>:<account-id>:snapshot:<your-snapshot-identifier> \
+    --tags Key=tag-key,Value=tag-value
+```
+
+Replace `<region>`, `<account-id>`, `<your-snapshot-identifier>`, `tag-key`, and `tag-value` with appropriate values.
+
+### 3. **Wait for Snapshot to Complete**
+Finally, use the `wait` command to wait until the snapshot is available:
+
+```bash
+aws rds wait db-snapshot-available \
+    --db-snapshot-identifier <your-snapshot-identifier>
+```
+
+### Full Script Example
+You can combine these steps into a script:
+
+```bash
+# Variables
+DB_INSTANCE_IDENTIFIER=<your-db-instance-identifier>
+SNAPSHOT_IDENTIFIER=<your-snapshot-identifier>
+REGION=<your-region>
+ACCOUNT_ID=<your-account-id>
+
+# Create Snapshot
+aws rds create-db-snapshot \
+    --db-snapshot-identifier $SNAPSHOT_IDENTIFIER \
+    --db-instance-identifier $DB_INSTANCE_IDENTIFIER
+
+# Wait for the snapshot to be created
+aws rds wait db-snapshot-available \
+    --db-snapshot-identifier $SNAPSHOT_IDENTIFIER
+
+# Get RDS Tags
+TAGS=$(aws rds list-tags-for-resource \
+    --resource-name arn:aws:rds:$REGION:$ACCOUNT_ID:db:$DB_INSTANCE_IDENTIFIER \
+    --query 'TagList' --output json)
+
+# Apply Tags to Snapshot
+aws rds add-tags-to-resource \
+    --resource-name arn:aws:rds:$REGION:$ACCOUNT_ID:snapshot:$SNAPSHOT_IDENTIFIER \
+    --tags "$TAGS"
+```
+
+This script will create a snapshot, wait for it to be available, and then copy the tags from the RDS instance to the snapshot.
