@@ -1,0 +1,90 @@
+To restore a PostgreSQL RDS instance from a snapshot and copy the tags from the snapshot to the restored RDS instance using the AWS CLI, follow these steps:
+
+### 1. **Restore the RDS Instance from the Snapshot**
+Use the `restore-db-instance-from-db-snapshot` command to create a new RDS instance from the snapshot:
+
+```bash
+aws rds restore-db-instance-from-db-snapshot \
+    --db-instance-identifier <new-db-instance-identifier> \
+    --db-snapshot-identifier <snapshot-identifier> \
+    --db-instance-class <db-instance-class> \
+    --availability-zone <availability-zone> \
+    --db-subnet-group-name <subnet-group> \
+    --multi-az \
+    --publicly-accessible
+```
+
+Replace the placeholders with appropriate values:
+- `<new-db-instance-identifier>`: The identifier for the new RDS instance.
+- `<snapshot-identifier>`: The identifier of the snapshot you want to restore from.
+- `<db-instance-class>`: The instance type (e.g., `db.t3.medium`).
+- `<availability-zone>`: (Optional) The availability zone where you want the new RDS instance.
+- `<subnet-group>`: (Optional) The DB subnet group to assign to the instance.
+
+### 2. **Wait for the Restoration to Complete**
+Wait for the RDS instance to become available:
+
+```bash
+aws rds wait db-instance-available \
+    --db-instance-identifier <new-db-instance-identifier>
+```
+
+### 3. **Copy Tags from Snapshot to the New RDS Instance**
+Retrieve the tags from the snapshot and apply them to the new RDS instance:
+
+1. **Get Tags from Snapshot:**
+
+   ```bash
+   TAGS=$(aws rds list-tags-for-resource \
+       --resource-name arn:aws:rds:<region>:<account-id>:snapshot:<snapshot-identifier> \
+       --query 'TagList' --output json)
+   ```
+
+   Replace `<region>`, `<account-id>`, and `<snapshot-identifier>` with your specific details.
+
+2. **Apply Tags to New RDS Instance:**
+
+   ```bash
+   aws rds add-tags-to-resource \
+       --resource-name arn:aws:rds:<region>:<account-id>:db:<new-db-instance-identifier> \
+       --tags "$TAGS"
+   ```
+
+### Full Script Example
+
+```bash
+# Variables
+NEW_DB_INSTANCE_IDENTIFIER=my-new-db-instance
+SNAPSHOT_IDENTIFIER=my-db-snapshot
+DB_INSTANCE_CLASS=db.t3.medium
+REGION=us-east-1
+ACCOUNT_ID=123456789012
+AVAILABILITY_ZONE=us-east-1a
+SUBNET_GROUP=my-subnet-group
+
+# Restore DB from Snapshot
+aws rds restore-db-instance-from-db-snapshot \
+    --db-instance-identifier $NEW_DB_INSTANCE_IDENTIFIER \
+    --db-snapshot-identifier $SNAPSHOT_IDENTIFIER \
+    --db-instance-class $DB_INSTANCE_CLASS \
+    --availability-zone $AVAILABILITY_ZONE \
+    --db-subnet-group-name $SUBNET_GROUP \
+    --multi-az \
+    --publicly-accessible
+
+# Wait for DB instance to become available
+aws rds wait db-instance-available \
+    --db-instance-identifier $NEW_DB_INSTANCE_IDENTIFIER
+
+# Get Tags from Snapshot
+TAGS=$(aws rds list-tags-for-resource \
+    --resource-name arn:aws:rds:$REGION:$ACCOUNT_ID:snapshot:$SNAPSHOT_IDENTIFIER \
+    --query 'TagList' --output json)
+
+# Apply Tags to New RDS Instance
+aws rds add-tags-to-resource \
+    --resource-name arn:aws:rds:$REGION:$ACCOUNT_ID:db:$NEW_DB_INSTANCE_IDENTIFIER \
+    --tags "$TAGS"
+```
+
+This script restores the RDS instance from the specified snapshot, waits until the instance is available, and then copies the tags from the snapshot to the new RDS instance.
