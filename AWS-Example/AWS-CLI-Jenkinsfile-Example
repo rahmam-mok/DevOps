@@ -1,0 +1,77 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'us-west-2'  // Specify your AWS region
+        EC2_INSTANCE_ID = 'i-1234567890abcdef'  // Replace with your EC2 instance ID
+        RDS_INSTANCE_ID = 'your-rds-instance-id'  // Replace with your RDS instance ID
+        AWS_CREDENTIALS_ID = 'aws-credentials-id'  // Jenkins credentials ID for AWS
+    }
+
+    stages {
+        stage('AWS CLI Setup') {
+            steps {
+                script {
+                    // Install AWS CLI if not already installed
+                    sh 'which aws || sudo apt-get install awscli -y'
+                }
+            }
+        }
+
+        stage('Take EC2 Snapshot') {
+            steps {
+                script {
+                    sh '''
+                        echo "Taking EC2 Snapshot"
+                        aws ec2 create-snapshot --region $AWS_REGION --description "Jenkins EC2 Snapshot" --volume-id $(aws ec2 describe-instances --instance-ids $EC2_INSTANCE_ID --query "Reservations[].Instances[].BlockDeviceMappings[].Ebs[].VolumeId" --output text)
+                    '''
+                }
+            }
+        }
+
+        stage('Take RDS Snapshot') {
+            steps {
+                script {
+                    sh '''
+                        echo "Taking RDS Snapshot"
+                        aws rds create-db-snapshot --region $AWS_REGION --db-instance-identifier $RDS_INSTANCE_ID --db-snapshot-identifier "jenkins-rds-snapshot-$(date +%Y-%m-%d)"
+                    '''
+                }
+            }
+        }
+
+        stage('Reboot EC2 Instance') {
+            steps {
+                script {
+                    sh '''
+                        echo "Rebooting EC2 Instance"
+                        aws ec2 reboot-instances --instance-ids $EC2_INSTANCE_ID --region $AWS_REGION
+                    '''
+                }
+            }
+        }
+
+        stage('Reboot RDS Instance') {
+            steps {
+                script {
+                    sh '''
+                        echo "Rebooting RDS Instance"
+                        aws rds reboot-db-instance --db-instance-identifier $RDS_INSTANCE_ID --region $AWS_REGION
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up...'
+        }
+        success {
+            echo 'Operations completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+    }
+}
