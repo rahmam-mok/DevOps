@@ -1,0 +1,166 @@
+To spin up AWS servers that can automatically scale up and down based on CPU and memory usage thresholds (like when they reach 70%), you can use **AWS Auto Scaling** with **CloudWatch Alarms**. Here's a step-by-step guide to set this up:
+
+### Step 1: Create a Launch Template (or Launch Configuration)
+A launch template defines the instance settings, such as instance type, AMI, and other configurations needed for the EC2 instances.
+
+#### Example Terraform for a Launch Template:
+```hcl
+resource "aws_launch_template" "example" {
+  name_prefix   = "example-lt"
+  instance_type = "t3.medium"
+  ami           = "ami-0c55b159cbfafe1f0"  # Replace with your own AMI
+  key_name      = "my-key"  # Replace with your SSH key
+
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.instance_sg.id]
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+```
+
+### Step 2: Create an Auto Scaling Group (ASG)
+The Auto Scaling Group will be responsible for adding/removing EC2 instances based on scaling policies that we will define in the next steps.
+
+#### Example Terraform for Auto Scaling Group:
+```hcl
+resource "aws_autoscaling_group" "example_asg" {
+  desired_capacity     = 2
+  max_size             = 5
+  min_size             = 1
+  vpc_zone_identifier  = [aws_subnet.example.id]
+  launch_template {
+    id      = aws_launch_template.example.id
+    version = "$Latest"
+  }
+
+  tag {
+    key                 = "Name"
+    value               = "example-instance"
+    propagate_at_launch = true
+  }
+
+  health_check_type         = "EC2"
+  health_check_grace_period = 300
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+```
+
+### Step 3: Define CloudWatch Alarms for CPU and Memory Usage
+AWS provides built-in CloudWatch metrics for **CPU utilization**, but for **memory usage**, you need to install the CloudWatch agent on your EC2 instances to push memory metrics.
+
+#### 1. **CloudWatch Alarm for CPU Utilization**:
+You can create a CloudWatch alarm to trigger Auto Scaling actions based on CPU usage. Here's an example configuration for scaling when CPU utilization reaches 70%.
+
+```hcl
+resource "aws_cloudwatch_metric_alarm" "cpu_high" {
+  alarm_name          = "cpu-high"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = "120"
+  statistic           = "Average"
+  threshold           = "70"
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.example_asg.name
+  }
+
+  alarm_actions = [aws_autoscaling_policy.scale_up_policy.arn]
+}
+
+resource "aws_autoscaling_policy" "scale_up_policy" {
+  name                   = "scale-up-policy"
+  scaling_adjustment      = 1
+  adjustment_type         = "ChangeInCapacity"
+  autoscaling_group_name  = aws_autoscaling_group.example_asg.name
+}
+```
+
+#### 2. **CloudWatch Alarm for Memory Utilization**:
+For memory, you need to configure the CloudWatch agent to publish memory metrics.
+
+1. **Install CloudWatch Agent on EC2**:
+   - You need to install and configure the CloudWatch agent on your EC2 instances to push memory metrics.
+   - Example user data script to install the agent (in the launch template):
+   ```bash
+   #!/bin/bash
+   sudo yum install -y amazon-cloudwatch-agent
+   sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-config-wizard
+   sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a start
+   ```
+
+2. **Create CloudWatch Alarm for Memory**:
+   Once the CloudWatch agent is pushing memory metrics, create a CloudWatch alarm based on memory utilization:
+   ```hcl
+   resource "aws_cloudwatch_metric_alarm" "memory_high" {
+     alarm_name          = "memory-high"
+     comparison_operator = "GreaterThanOrEqualToThreshold"
+     evaluation_periods  = "2"
+     metric_name         = "mem_used_percent"
+     namespace           = "CWAgent"
+     period              = "120"
+     statistic           = "Average"
+     threshold           = "70"
+
+     dimensions = {
+       AutoScalingGroupName = aws_autoscaling_group.example_asg.name
+     }
+
+     alarm_actions = [aws_autoscaling_policy.scale_up_policy.arn]
+   }
+   ```
+
+### Step 4: Define Scale-Down Policy
+You should also create a policy for scaling down when CPU and memory usage drop below a certain threshold.
+
+#### Example Terraform for Scale-Down Policy:
+```hcl
+resource "aws_cloudwatch_metric_alarm" "cpu_low" {
+  alarm_name          = "cpu-low"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = "120"
+  statistic           = "Average"
+  threshold           = "20"  # Scale down when CPU utilization is below 20%
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.example_asg.name
+  }
+
+  alarm_actions = [aws_autoscaling_policy.scale_down_policy.arn]
+}
+
+resource "aws_autoscaling_policy" "scale_down_policy" {
+  name                   = "scale-down-policy"
+  scaling_adjustment      = -1
+  adjustment_type         = "ChangeInCapacity"
+  autoscaling_group_name  = aws_autoscaling_group.example_asg.name
+}
+```
+
+### Step 5: Apply Terraform Configuration
+After configuring the Auto Scaling Group, CloudWatch Alarms, and policies, you can deploy the setup using:
+
+```bash
+terraform init
+terraform plan
+terraform apply
+```
+
+### Summary:
+- **Launch Template**: Defines EC2 instance configuration.
+- **Auto Scaling Group (ASG)**: Automatically scales instances based on the policies.
+- **CloudWatch Alarms**: Monitors CPU and memory usage, triggering scale-up/down actions when thresholds are met.
+- **Policies**: Define scaling actions when alarms are triggered.
+
+This setup will ensure that your AWS servers scale up when CPU or memory usage exceeds 70% and scale down when it falls below a specified threshold. Let me know if you need help with any specific part!
