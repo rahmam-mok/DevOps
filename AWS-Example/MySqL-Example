@@ -1,0 +1,93 @@
+Here is a Terraform script to create a MySQL RDS instance on AWS. It provisions a MySQL RDS database instance, defines security group rules, and optionally creates a subnet group for the RDS instance.
+
+### Terraform Script:
+
+```hcl
+# Provider configuration
+provider "aws" {
+  region = "us-west-2" # Replace with your desired AWS region
+}
+
+# Create a security group for RDS
+resource "aws_security_group" "rds_sg" {
+  name        = "rds_security_group"
+  description = "Allow inbound traffic to RDS MySQL"
+  
+  # Allow MySQL inbound traffic on port 3306
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Adjust this according to your security requirements
+  }
+
+  # Allow outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Create a DB subnet group
+resource "aws_db_subnet_group" "rds_subnet_group" {
+  name       = "rds_subnet_group"
+  subnet_ids = ["subnet-12345678", "subnet-87654321"] # Replace with your subnet IDs
+
+  tags = {
+    Name = "RDS subnet group"
+  }
+}
+
+# Create the MySQL RDS instance
+resource "aws_db_instance" "mysql_rds" {
+  allocated_storage    = 20              # Size in GB
+  engine               = "mysql"         # RDS engine
+  engine_version       = "8.0"           # MySQL version
+  instance_class       = "db.t3.micro"   # Instance type
+  identifier           = "mysql-db"      # Name of the RDS instance
+  username             = "admin"         # Admin username
+  password             = "password1234"  # Admin password
+  db_name              = "mydb"          # Default database name
+  port                 = 3306
+  publicly_accessible  = true            # Set to false for internal access only
+  vpc_security_group_ids = [aws_security_group.rds_sg.id] # Associate security group
+  db_subnet_group_name = aws_db_subnet_group.rds_subnet_group.name
+
+  # Backup configurations
+  backup_retention_period = 7
+  backup_window           = "07:00-09:00"
+
+  # Storage settings
+  storage_type           = "gp2"
+  storage_encrypted      = true
+
+  # Monitoring & Maintenance
+  monitoring_interval    = 60            # Set CloudWatch monitoring interval
+  maintenance_window     = "Mon:03:00-Mon:04:00"
+
+  # Multi-AZ deployment (optional)
+  multi_az = false
+
+  tags = {
+    Name = "MySQL RDS"
+  }
+
+  # Deletion protection (optional)
+  deletion_protection = false
+}
+
+# Output the RDS endpoint
+output "rds_endpoint" {
+  value = aws_db_instance.mysql_rds.endpoint
+}
+```
+
+### Instructions:
+1. Replace the `subnet_ids` in the `aws_db_subnet_group` resource with your actual VPC subnets.
+2. Modify the region, database identifier, username, and password to suit your environment.
+3. If you don’t want public access, set `publicly_accessible = false`.
+4. Save the script as `main.tf` and run `terraform init`, `terraform plan`, and `terraform apply` to provision the RDS instance.
+
+This script provisions a basic MySQL RDS instance. You can expand it with additional configurations such as performance insights, enhanced monitoring, or scaling settings as needed.
