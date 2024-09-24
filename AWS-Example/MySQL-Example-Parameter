@@ -1,0 +1,107 @@
+To create a MySQL RDS instance on AWS using Terraform and enable CloudWatch logs along with parameter groups for audit logging, you can follow the steps below.
+
+### Terraform Script
+
+```hcl
+provider "aws" {
+  region = "us-east-1"  # Update your desired region
+}
+
+# Create a security group for MySQL RDS instance
+resource "aws_security_group" "rds_sg" {
+  name        = "rds_security_group"
+  description = "Security group for MySQL RDS"
+
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Restrict this in production, allow only trusted IPs
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# RDS parameter group for MySQL to enable audit logs
+resource "aws_db_parameter_group" "mysql_audit_logs" {
+  name   = "mysql-audit-logs-parameter-group"
+  family = "mysql8.0"  # Update based on your MySQL version
+
+  parameter {
+    name  = "server_audit_logging"
+    value = "1"
+  }
+
+  parameter {
+    name  = "server_audit_events"
+    value = "CONNECT,QUERY"
+  }
+
+  parameter {
+    name  = "server_audit_file_path"
+    value = "/rdsdbdata/log/audit.log"
+  }
+}
+
+# MySQL RDS instance
+resource "aws_db_instance" "mysql" {
+  identifier         = "mysql-rds-instance"
+  engine             = "mysql"
+  instance_class     = "db.t3.medium"  # Adjust instance class based on your needs
+  allocated_storage  = 20
+  db_name            = "mydb"
+  username           = "admin"
+  password           = "yourpassword"  # Change to a more secure password and use secrets management
+  parameter_group_name = aws_db_parameter_group.mysql_audit_logs.name
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+
+  # Enable CloudWatch logs for MySQL
+  enabled_cloudwatch_logs_exports = ["audit", "error", "general", "slowquery"]
+
+  skip_final_snapshot = true
+
+  # Backup and retention settings
+  backup_retention_period = 7
+  multi_az                = false
+  publicly_accessible     = false
+}
+
+# CloudWatch log group for RDS logs
+resource "aws_cloudwatch_log_group" "rds_logs" {
+  name              = "/aws/rds/instance/mysql-rds-instance"
+  retention_in_days = 7  # Keep logs for 7 days, adjust as needed
+}
+
+output "rds_endpoint" {
+  value = aws_db_instance.mysql.endpoint
+}
+
+output "cloudwatch_log_group" {
+  value = aws_cloudwatch_log_group.rds_logs.name
+}
+```
+
+### Explanation:
+- **Security Group**: Allows inbound traffic on port `3306` for MySQL.
+- **Parameter Group**: Configures audit logs for the RDS MySQL instance.
+  - `server_audit_logging` is set to `1` to enable audit logging.
+  - `server_audit_events` specifies which events to log (e.g., `CONNECT` and `QUERY`).
+  - `server_audit_file_path` specifies the file path for the audit logs.
+- **RDS Instance**: Creates a MySQL RDS instance.
+  - `enabled_cloudwatch_logs_exports` allows exporting logs to CloudWatch (audit, error, general, slowquery).
+  - `parameter_group_name` applies the custom parameter group.
+- **CloudWatch Log Group**: Creates a CloudWatch log group to store the logs for this RDS instance.
+- **Outputs**: Provides the RDS endpoint and CloudWatch log group name as outputs.
+
+### Usage:
+1. Save the Terraform script to a file, e.g., `main.tf`.
+2. Run `terraform init` to initialize the Terraform environment.
+3. Run `terraform plan` to review the changes Terraform will apply.
+4. Run `terraform apply` to spin up the MySQL RDS instance and related resources.
+
+Let me know if you need further customization or help with the setup!
