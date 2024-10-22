@@ -1,0 +1,72 @@
+Since your applications are using Mongojack 2.10.1 and mongo-java-driver 3.11.0, both of which are interacting with MongoDB 6.0, the performance degradation could be linked to compatibility or inefficiencies between these libraries and MongoDB 6.0. Here are the steps to investigate and address the issue:
+
+1. Driver and Library Compatibility
+
+	•	MongoDB 6.0 Compatibility: MongoDB 6.0 introduces several new features and optimizations that may not be fully supported by older driver versions. The mongo-java-driver 3.11.0 was released for compatibility with MongoDB 4.x and may not efficiently handle features or optimizations in MongoDB 6.0. Consider upgrading to a more recent version of the driver, such as mongo-java-driver 4.x, which provides support for MongoDB 5.0 and 6.0.
+	•	Upgrade to the latest MongoDB Java driver:
+
+<dependency>
+  <groupId>org.mongodb</groupId>
+  <artifactId>mongodb-driver-sync</artifactId>
+  <version>4.x.x</version>
+</dependency>
+
+
+	•	Mongojack: The current version (2.10.1) of Mongojack might also not be optimized for MongoDB 6.0. Verify whether a newer version of Mongojack is available that is compatible with the updated driver and MongoDB 6.0. If not, you may need to explore alternatives or directly integrate with the MongoDB Java driver.
+
+2. Check for Driver-Level Performance Issues
+
+	•	Connection Pooling: MongoDB 6.0 might have different requirements for connection management. Ensure that your connection pool settings are optimized for the new driver version and server. For mongo-java-driver, you can adjust these settings:
+
+MongoClientSettings settings = MongoClientSettings.builder()
+    .applyToConnectionPoolSettings(builder ->
+        builder.maxSize(100).minSize(10))
+    .build();
+MongoClient mongoClient = MongoClients.create(settings);
+
+
+	•	Monitor Connections: Use mongostat or mongotop to check if the number of open connections has increased post-upgrade, which could indicate issues with connection management in the current driver.
+
+3. Query Plans and Indexes
+
+	•	Recheck Indexes: MongoDB 6.0 might be using different query plans, which could result in degraded performance if indexes are not optimized. Rebuild critical indexes:
+
+db.collection.reIndex()
+
+
+	•	Explain Plans: Run explain() on slow queries and review their execution plans to ensure efficient use of indexes:
+
+db.collection.find(query).explain("executionStats")
+
+
+
+4. Driver Logging and Monitoring
+
+	•	Enable Driver-Level Logs: Turn on verbose logging in the mongo-java-driver to inspect how queries and connections are being handled:
+
+MongoClientSettings settings = MongoClientSettings.builder()
+    .applyToClusterSettings(builder -> builder.serverSelectionTimeout(5000, TimeUnit.MILLISECONDS))
+    .build();
+
+Look for any signs of timeouts, excessive retries, or connection issues.
+
+5. Review Connection Usage in Mongojack
+
+	•	Mongojack Serialization: Ensure that the serialization/deserialization mechanisms in Mongojack are functioning efficiently with MongoDB 6.0. If there are bottlenecks in handling large documents or new BSON types, performance might degrade.
+	•	Test Direct Mongo Java Driver Calls: Temporarily bypass Mongojack to interact directly with the mongo-java-driver and check if the performance improves. This will help isolate whether Mongojack is causing the performance issues.
+
+6. Monitor MongoDB Server Performance
+
+	•	Server Resource Usage: Track CPU, memory, and I/O utilization on the MongoDB server using mongostat and mongotop. This will help identify whether the issue is related to the server itself or the client libraries.
+	•	Replication Lag: Check for replication delays using rs.status() to ensure that the performance degradation is not due to lagging secondary nodes.
+
+7. Consult Documentation for Deprecation
+
+	•	Review the MongoDB 6.0 release notes for any deprecated features or API changes that could be impacting performance with the older driver and Mongojack versions.
+
+8. Consider Updating Driver and Application Code
+
+	•	Update Drivers: The most straightforward approach to address compatibility and performance issues would be to upgrade to the latest stable versions of both Mongojack and mongo-java-driver. These versions are better optimized for newer MongoDB features.
+	•	Test on Non-Production Environment: Before deploying the new driver or Mongojack version in production, ensure that you thoroughly test the application in a staging environment to assess the performance impact.
+
+By upgrading the drivers, tuning connection settings, and checking for inefficiencies in Mongojack’s handling of MongoDB 6.0 features, you can address performance degradation and improve application performance.
