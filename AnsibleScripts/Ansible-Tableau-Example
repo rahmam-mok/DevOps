@@ -1,0 +1,95 @@
+Here’s a step-by-step guide for creating Ansible playbooks to install and configure Tableau Server on Windows Server 2022. This includes prerequisites, installation, license activation, and configuration settings.
+
+1. Prerequisites
+
+Before you begin, ensure:
+
+	•	You have a Windows Server 2022 instance ready.
+	•	WinRM is configured and accessible from your Ansible control node.
+	•	Ansible is set up with ansible.windows and community.windows collections installed, which can be installed with:
+
+ansible-galaxy collection install ansible.windows community.windows
+
+
+
+2. Playbook Structure
+
+We’ll create separate tasks for downloading, installing, activating, and configuring Tableau Server.
+
+3. Playbook: Install and Configure Tableau Server on Windows
+
+File: install_tableau_server.yml
+
+---
+- name: Install and Configure Tableau Server on Windows Server 2022
+  hosts: tableau_servers
+  tasks:
+
+    - name: Ensure Tableau Installer is Downloaded
+      ansible.builtin.win_get_url:
+        url: "https://downloads.tableau.com/tssoftware/tableau-server-<VERSION>-win.exe"
+        dest: "C:\\temp\\tableau_server_installer.exe"
+      register: download_result
+
+    - name: Run Tableau Installer
+      ansible.windows.win_command: |
+        C:\\temp\\tableau_server_installer.exe /quiet /install
+      args:
+        chdir: "C:\\temp\\"
+      when: download_result is succeeded
+
+    - name: Wait for Tableau Service to be Installed
+      ansible.windows.win_service:
+        name: "Tableau Server"
+        start_mode: auto
+        state: started
+
+    - name: Activate Tableau License
+      ansible.windows.win_command: |
+        "C:\\Program Files\\Tableau\\Tableau Server\\<VERSION>\\bin\\tabcmd.exe" licenses activate -k <LICENSE_KEY>
+      register: activate_result
+      ignore_errors: yes
+
+    - name: Initialize Tableau Server
+      ansible.windows.win_command: |
+        "C:\\Program Files\\Tableau\\Tableau Server\\<VERSION>\\packages\\scripts.<VERSION>\\initialize-tsm.cmd"
+      when: activate_result is succeeded
+
+    - name: Configure Tableau Server with Settings File
+      ansible.windows.win_copy:
+        src: ./config/tableau_settings.json
+        dest: "C:\\Program Files\\Tableau\\Tableau Server\\data\\tabsvc\\config\\tableau_settings.json"
+
+    - name: Apply Configuration Changes
+      ansible.windows.win_command: |
+        "C:\\Program Files\\Tableau\\Tableau Server\\<VERSION>\\bin\\tsm.cmd" pending-changes apply
+
+    - name: Start Tableau Server
+      ansible.windows.win_service:
+        name: "Tableau Server"
+        start_mode: auto
+        state: started
+
+4. Explanation of Each Task
+
+	•	Ensure Tableau Installer is Downloaded: Downloads the Tableau Server installer to the server.
+	•	Run Tableau Installer: Executes the installer in quiet mode.
+	•	Wait for Tableau Service to be Installed: Ensures that the Tableau Server service is running.
+	•	Activate Tableau License: Activates Tableau Server with your license key.
+	•	Initialize Tableau Server: Runs initialization scripts.
+	•	Configure Tableau Server with Settings File: Copies a predefined JSON configuration file to set up initial Tableau settings.
+	•	Apply Configuration Changes: Applies configuration changes using TSM (Tableau Services Manager).
+	•	Start Tableau Server: Ensures that Tableau Server is running in automatic start mode.
+
+5. Configuring Inventory and Variables
+
+Make sure to define your hosts and variables in the Ansible inventory file. For example:
+
+File: hosts.ini
+
+[tableau_servers]
+windows-server-2022 ansible_host=YOUR_SERVER_IP ansible_user=YOUR_USERNAME ansible_password=YOUR_PASSWORD ansible_connection=winrm ansible_winrm_transport=ntlm ansible_winrm_server_cert_validation=ignore
+
+Replace <VERSION> with the specific Tableau Server version (e.g., 2023.1), and provide the license key in the playbook.
+
+This should give you a basic setup for installing and configuring Tableau Server on a Windows 2022 Server with Ansible. Let me know if you’d like further customizations or additional configuration tasks.
