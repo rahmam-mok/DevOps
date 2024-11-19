@@ -1,0 +1,60 @@
+Configuring SAML authentication with Azure AD for MongoDB Atlas involves integrating Azure as your identity provider (IdP) and MongoDB Atlas as the service provider (SP). Here’s a step-by-step guide:
+
+Step 1: Configure Azure AD
+
+	1.	Sign in to Azure AD:
+	•	Go to the Azure Portal.
+	•	Navigate to Azure Active Directory > Enterprise Applications > New Application.
+	2.	Create a New Application:
+	•	Click Create your own application.
+	•	Name the application (e.g., “MongoDB Atlas SSO”).
+	•	Choose Integrate any other application you don’t find in the gallery and create.
+	3.	Set Up SAML Configuration:
+	•	Under Manage, select Single sign-on.
+	•	Choose SAML as the SSO method.
+	4.	Edit Basic SAML Configuration:
+	•	Set the following fields:
+	•	Identifier (Entity ID): Use the Atlas-provided Entity ID (e.g., https://cloud.mongodb.com).
+	•	Reply URL (Assertion Consumer Service URL): Use the ACS URL provided by Atlas (e.g., https://cloud.mongodb.com/user/sso/).
+	•	Sign-On URL (optional): Leave blank unless Atlas specifies.
+	5.	Download Federation Metadata:
+	•	Download the Federation Metadata XML file for later use in MongoDB Atlas.
+
+Step 2: Configure MongoDB Atlas
+
+	1.	Log in to MongoDB Atlas:
+	•	Go to MongoDB Atlas.
+	•	Navigate to Organization Settings > Authentication.
+	2.	Enable SAML:
+	•	Enable SAML Authentication.
+	•	Upload the Federation Metadata XML file downloaded from Azure AD.
+	•	Save the settings.
+	3.	Set Organization Entity ID:
+	•	Use the same Entity ID configured in Azure AD.
+	4.	Test Connection:
+	•	Click Test to ensure the SAML integration is successful.
+
+Step 3: Map Roles and Attributes
+
+	1.	In MongoDB Atlas:
+	•	Go to Access Management > SAML Roles Mapping.
+	•	Map Azure AD groups to Atlas roles (e.g., Organization Owner, Project Admin).
+	2.	In Azure AD:
+	•	Assign users or groups to the MongoDB Atlas application under Users and Groups.
+	•	Ensure the SAML attributes (e.g., Group, Role) are passed correctly to Atlas.
+
+Step 4: Test SSO
+
+	1.	Test Login:
+	•	Log in to MongoDB Atlas via the SSO URL (e.g., https://cloud.mongodb.com/user/sso/).
+	•	Use an Azure AD account assigned to the Atlas application.
+	2.	Verify Role Assignment:
+	•	Check that the logged-in user has the correct role and access level based on the role mappings.
+
+Common Issues and Troubleshooting
+
+	•	Assertion Errors: Ensure the Identifier and Reply URL in Azure match the values in Atlas.
+	•	Role Mapping Issues: Verify that group names in Azure match the role mappings in Atlas exactly.
+	•	Time Skew: Check that both systems have synchronized time settings to avoid SAML assertion expiration errors.
+
+Let me know if you need more help!
