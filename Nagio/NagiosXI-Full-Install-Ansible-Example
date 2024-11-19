@@ -1,0 +1,105 @@
+---
+- name: Install Nagios XI on RHEL 8
+  hosts: nagios_server
+  become: yes
+  vars_prompt:
+    - name: nagios_admin_password
+      prompt: "Enter the password for Nagios admin user"
+      private: yes
+    - name: mariadb_root_password
+      prompt: "Enter MariaDB root password"
+      private: yes
+  tasks:
+
+    - name: Ensure the system is up to date
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Install required packages
+      yum:
+        name:
+          - wget
+          - curl
+          - php
+          - httpd
+          - gcc
+          - glibc
+          - glibc-common
+          - gd
+          - gd-devel
+          - openssl
+          - openssl-devel
+          - perl
+          - postfix
+          - mariadb
+          - mariadb-server
+          - expect
+        state: present
+
+    - name: Start and enable MariaDB
+      systemd:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    - name: Set MariaDB root password
+      mysql_user:
+        login_user: root
+        name: root
+        password: "{{ mariadb_root_password }}"
+
+    - name: Start and enable Apache
+      systemd:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Download Nagios XI installer
+      get_url:
+        url: "https://assets.nagios.com/downloads/nagiosxi/xi-latest.tar.gz"
+        dest: /tmp/xi-latest.tar.gz
+
+    - name: Extract Nagios XI installer
+      unarchive:
+        src: /tmp/xi-latest.tar.gz
+        dest: /tmp/
+        remote_src: yes
+
+    - name: Run Nagios XI installation script
+      expect:
+        command: "/tmp/nagiosxi/fullinstall"
+        responses:
+          "Enter a password for the Nagios Admin user:" "{{ nagios_admin_password }}"
+          "Confirm password:" "{{ nagios_admin_password }}"
+          "Database root password:" "{{ mariadb_root_password }}"
+          "Do you want to continue? (y/n)" "y"
+      timeout: 3600
+
+    - name: Clean up installation files
+      file:
+        path: "/tmp/xi-latest.tar.gz"
+        state: absent
+      ignore_errors: yes
+
+    - name: Ensure Nagios services are running
+      systemd:
+        name: nagios
+        state: started
+        enabled: yes
+
+    - name: Open firewall ports for Nagios
+      firewalld:
+        port: "{{ item }}"
+        permanent: yes
+        state: enabled
+      loop:
+        - 80/tcp
+        - 443/tcp
+      notify: restart_firewalld
+
+  handlers:
+    - name: restart_firewalld
+      service:
+        name: firewalld
+        state: restarted
