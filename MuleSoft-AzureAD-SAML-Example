@@ -1,0 +1,86 @@
+To configure SAML authentication for MuleSoft’s Anypoint Platform with Azure Active Directory (Azure AD), follow the steps below:
+
+1. Prerequisites
+
+	•	Administrative access to Azure AD and Anypoint Platform.
+	•	A verified domain in Azure AD.
+	•	Access to the Azure AD SAML metadata and Anypoint SAML configuration.
+
+2. Configure Azure AD as the Identity Provider
+
+Step 1: Create an Enterprise Application
+
+	1.	Log in to the Azure Portal.
+	2.	Navigate to Azure Active Directory > Enterprise Applications.
+	3.	Click + New Application > Create Your Own Application.
+	•	Name it (e.g., MuleSoft SAML Integration).
+	•	Choose Integrate any other application you don’t find in the gallery.
+	•	Click Create.
+
+Step 2: Set Up Single Sign-On (SSO)
+
+	1.	In your new application, go to the Single sign-on section.
+	2.	Select SAML as the single sign-on method.
+
+Step 3: Configure the Basic SAML Configuration
+
+	1.	Click Edit under Basic SAML Configuration.
+	2.	Fill out the following fields:
+	•	Identifier (Entity ID): https://anypoint.mulesoft.com/login/saml
+	•	Reply URL (Assertion Consumer Service URL):
+https://anypoint.mulesoft.com/accounts/login/sso/saml
+	•	Sign on URL: Leave blank (optional).
+	3.	Save the configuration.
+
+Step 4: Download Azure AD SAML Metadata
+
+	1.	In the SAML Signing Certificate section, download the Federation Metadata XML.
+	2.	This file will be uploaded to Anypoint Platform.
+
+3. Configure SAML in Anypoint Platform
+
+Step 1: Enable SAML in Anypoint
+
+	1.	Log in to Anypoint Platform as an admin.
+	2.	Navigate to Access Management > Organization.
+	3.	Select the Identity Management tab and click Configure SAML.
+
+Step 2: Upload Azure AD Metadata
+
+	1.	Upload the Federation Metadata XML file downloaded from Azure AD.
+	2.	Configure the following:
+	•	Entity ID: https://sts.windows.net/<your-tenant-id>/
+	•	Single Sign-On URL: Found in Azure under Basic SAML Configuration.
+
+Step 3: Save and Test Configuration
+
+	1.	Click Save to enable SAML for your organization.
+	2.	Test the integration:
+	•	Log out of Anypoint.
+	•	Attempt to log in using your SSO credentials.
+	•	Verify that you’re redirected to Azure AD for authentication.
+
+4. Map Attributes and Claims in Azure AD
+
+	1.	In Azure AD, navigate to Single Sign-On > Attributes & Claims.
+	2.	Ensure the following attributes are configured:
+	•	Unique User Identifier (Name ID): Set to user.userprincipalname or user.mail.
+	•	Additional Claims:
+	•	email → user.mail
+	•	firstName → user.givenname
+	•	lastName → user.surname
+
+5. (Optional) Role Mapping
+
+If role-based access control is needed in MuleSoft:
+	1.	Use custom claims in Azure AD to map roles.
+	2.	Pass roles in the SAML assertion to Anypoint.
+	3.	In Anypoint, navigate to Access Management > Roles, and assign roles based on these claims.
+
+6. Troubleshooting Tips
+
+	•	Ensure Entity ID and Reply URL are correct and match in both systems.
+	•	Verify that time synchronization (NTP) is set up on both Anypoint and Azure AD to avoid token expiration issues.
+	•	Check the SAML logs in Azure AD and Anypoint for errors.
+
+Let me know if you encounter any specific issues!
