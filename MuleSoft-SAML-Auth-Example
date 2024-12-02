@@ -1,0 +1,58 @@
+To enable SAML (Security Assertion Markup Language) authentication in MuleSoft, you need to configure SAML authentication with the Anypoint Platform. This process involves integrating your Identity Provider (IdP) with Anypoint to facilitate Single Sign-On (SSO). Here’s a step-by-step guide:
+
+1. Prerequisites
+
+	•	Access to Anypoint Platform.
+	•	A configured Identity Provider (e.g., Okta, Azure AD, PingFederate) that supports SAML 2.0.
+	•	Administrative access to the Anypoint Platform.
+
+2. Configuring SAML in Anypoint Platform
+
+	1.	Log in to Anypoint Platform
+Go to the Anypoint Platform and log in as an administrator.
+	2.	Go to Organization Settings
+	•	Navigate to Access Management in the top-right menu.
+	•	Select Organization from the left-hand menu.
+	3.	Enable SAML Configuration
+	•	In the Identity Management tab, select Configure SAML.
+	•	Enable SAML by toggling the switch.
+	4.	Fill in Identity Provider Details
+	•	Enter the following details from your IdP configuration:
+	•	Entity ID: This is your IdP’s unique identifier.
+	•	Single Sign-On URL: The URL provided by your IdP for SSO.
+	•	X.509 Certificate: Upload the public certificate from your IdP for validation.
+	5.	Download Metadata File
+	•	After saving the configuration, download the metadata file provided by the Anypoint Platform. This file will be used to configure your IdP.
+
+3. Configuring the Identity Provider
+
+	1.	Log in to your Identity Provider’s admin console (e.g., Okta, Azure AD, PingFederate).
+	2.	Create a new SAML Application.
+	3.	Upload the metadata file from the Anypoint Platform or manually configure:
+	•	SP Entity ID (Service Provider): This is the Anypoint Platform Entity ID.
+	•	Assertion Consumer Service (ACS) URL: This is the URL where the IdP sends SAML assertions.
+	4.	Configure the SAML Assertion:
+	•	Map required attributes:
+	•	email: The user’s email address.
+	•	firstName: The user’s first name.
+	•	lastName: The user’s last name.
+	•	Optionally map roles if required.
+	5.	Save the application configuration in your IdP.
+
+4. Test the SAML Configuration
+
+	•	Log out of Anypoint Platform and attempt to log in again.
+	•	You should be redirected to your Identity Provider’s SSO login page.
+	•	After authentication, you should be redirected back to the Anypoint Platform with an active session.
+
+5. (Optional) Role Mapping
+
+If your organization uses role-based access control, you can map roles in Anypoint Platform:
+	•	In the Access Management section, assign roles to users based on SAML attributes.
+
+If you encounter issues, check:
+	•	The time synchronization between the Anypoint Platform and your IdP.
+	•	The SAML assertion format and attributes provided by your IdP.
+	•	Logs in both the IdP and Anypoint Platform for detailed error messages.
+
+Let me know if you need help troubleshooting!
