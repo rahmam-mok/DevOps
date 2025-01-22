@@ -1,0 +1,64 @@
+To configure MongoDB Atlas with Microsoft Entra ID (formerly Azure AD) for SAML authentication and role mapping, you need to set up both platforms and map users to MongoDB roles. Here’s a step-by-step guide:
+
+Step 1: Configure Microsoft Entra ID for MongoDB Atlas
+	1.	Sign in to Microsoft Entra Admin Center:
+Go to the Microsoft Entra Admin Center and sign in.
+	2.	Register the MongoDB Atlas Application:
+	•	Navigate to Azure Active Directory > Enterprise Applications > New Application.
+	•	Search for “MongoDB Atlas” or choose Non-gallery application to create a custom SAML integration.
+	•	Name the application (e.g., MongoDB Atlas) and create it.
+	3.	Configure SAML-based Single Sign-On (SSO):
+	•	In the MongoDB Atlas application, go to the Single Sign-On section and select SAML.
+	•	Configure the SAML settings:
+	•	Identifier (Entity ID): https://cloud.mongodb.com
+	•	Reply URL (Assertion Consumer Service URL): https://cloud.mongodb.com/user_account/<Your_Org_ID>/sso/post
+	•	Replace <Your_Org_ID> with your MongoDB Atlas organization ID. You can find this in the Atlas UI under Organization Settings.
+	•	Download the Federation Metadata XML from Microsoft Entra. This will be used in MongoDB Atlas.
+	4.	Map SAML Attributes:
+Add the following claim mappings under Attributes & Claims:
+	•	Name ID: user.mail (or use user.principalname if email is not configured).
+	•	FirstName: user.givenname
+	•	LastName: user.surname
+
+Step 2: Configure MongoDB Atlas for SAML SSO
+	1.	Log in to MongoDB Atlas:
+Go to the MongoDB Atlas platform and log in with an admin account.
+	2.	Enable SAML Authentication:
+	•	Go to Organization Settings > SSO Settings.
+	•	Enable SAML Authentication.
+	3.	Upload Metadata from Microsoft Entra:
+	•	Upload the Federation Metadata XML file you downloaded from Microsoft Entra.
+	4.	Verify SAML Configuration:
+	•	MongoDB Atlas will generate a unique SAML Assertion Consumer Service (ACS) URL and Entity ID.
+	•	Ensure these match the configuration in Microsoft Entra.
+	5.	Test SSO:
+	•	Add a test user in Microsoft Entra and assign them to the MongoDB Atlas application.
+	•	Log in to MongoDB Atlas with the Log in with SSO option using that user’s email.
+
+Step 3: Configure Role Mapping
+	1.	Create Custom Roles in MongoDB Atlas:
+	•	In MongoDB Atlas, go to Organization Settings > SSO Settings > Role Mappings.
+	•	Add role mappings to assign MongoDB roles (e.g., Organization Owner, Project Data Access Admin, etc.) based on SAML group attributes.
+	2.	Configure Group Claims in Microsoft Entra:
+	•	In the MongoDB Atlas Application in Microsoft Entra, configure Group Claims:
+	•	Include groups assigned to the application.
+	•	Use the group’s Object ID or Group Name as the claim value.
+	3.	Map Groups to MongoDB Roles:
+	•	In MongoDB Atlas, add the exact SAML group values (from Microsoft Entra) to the Role Mapping section.
+	•	Assign appropriate roles to each group.
+
+Step 4: Test the Setup
+	1.	Add test users to the respective groups in Microsoft Entra.
+	2.	Ensure users can log in to MongoDB Atlas with their assigned SSO credentials.
+	3.	Verify role-based access works as expected (e.g., project-level or organization-level permissions).
+
+Notes:
+	•	Ensure clocks are synchronized between Microsoft Entra and MongoDB Atlas to avoid SAML assertion errors.
+	•	If using custom claims, ensure they align with MongoDB Atlas requirements.
+	•	For troubleshooting, enable SAML debugging in MongoDB Atlas under SSO Settings.
+
+Let me know if you need help with any specific part!
+
+
+
+
