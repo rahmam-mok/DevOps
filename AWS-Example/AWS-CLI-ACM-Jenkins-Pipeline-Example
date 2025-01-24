@@ -1,0 +1,129 @@
+To dynamically reimport SSL certificates, private keys, and chains into an existing AWS ACM certificate ARN by fetching them from HashiCorp Vault using the AWS CLI from Jenkins, follow these steps:
+
+Overview
+	1.	Vault Setup: Store the SSL certificate, private key, certificate chain, and ACM ARN in Vault.
+	2.	Jenkins Configuration: Fetch the secrets dynamically from Vault in the Jenkins pipeline.
+	3.	AWS CLI: Use the fetched values to update the certificate in ACM.
+
+Step 1: Store SSL Data in Vault
+
+Store the required data in Vault as key-value pairs (or use a secrets engine like PKI):
+	•	certificate.pem
+	•	private-key.pem
+	•	certificate-chain.pem
+	•	certificate-arn
+
+Example Vault JSON structure:
+
+{
+  "certificate.pem": "-----BEGIN CERTIFICATE-----\n...certificate data...\n-----END CERTIFICATE-----",
+  "private-key.pem": "-----BEGIN PRIVATE KEY-----\n...private key data...\n-----END PRIVATE KEY-----",
+  "certificate-chain.pem": "-----BEGIN CERTIFICATE-----\n...intermediate cert...\n-----END CERTIFICATE-----",
+  "certificate-arn": "arn:aws:acm:us-east-1:1234567890:certificate/abcd1234-efghhhhhhhhh"
+}
+
+Step 2: Jenkins Configuration
+	1.	Install Plugins:
+	•	Install the HashiCorp Vault Plugin in Jenkins.
+	2.	Configure Vault in Jenkins:
+	•	Add Vault configuration in Jenkins’ Global Tool Configuration:
+	•	Set the Vault address (e.g., https://vault.example.com).
+	•	Provide the Vault token or authentication method (e.g., AppRole, token-based).
+	3.	Create Vault Secrets:
+	•	Map the Jenkins job to fetch secrets dynamically.
+
+Step 3: Jenkins Pipeline Script
+
+Below is a declarative pipeline script that fetches secrets from Vault, saves them as files, and updates the ACM certificate:
+
+pipeline {
+    agent any
+    environment {
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') // AWS credentials stored in Jenkins
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        AWS_DEFAULT_REGION = 'us-east-1' // Replace with your AWS region
+        VAULT_ADDR = 'https://vault.example.com' // Replace with your Vault URL
+        VAULT_TOKEN = credentials('vault-token') // Vault token stored in Jenkins credentials
+    }
+    stages {
+        stage('Fetch SSL Data from Vault') {
+            steps {
+                script {
+                    // Fetch secrets from Vault
+                    def secrets = sh(script: """
+                        curl -s --header "X-Vault-Token: ${VAULT_TOKEN}" \
+                        ${VAULT_ADDR}/v1/secret/data/ssl | jq -r '.data.data'
+                    """, returnStdout: true)
+
+                    // Parse the secrets
+                    def sslData = readJSON text: secrets
+                    def certArn = sslData['certificate-arn']
+
+                    // Write certificates to files
+                    writeFile file: "${WORKSPACE}/certificate.pem", text: sslData['certificate.pem']
+                    writeFile file: "${WORKSPACE}/private-key.pem", text: sslData['private-key.pem']
+                    writeFile file: "${WORKSPACE}/certificate-chain.pem", text: sslData['certificate-chain.pem']
+
+                    // Export the ARN for use in the next step
+                    env.CERTIFICATE_ARN = certArn
+                }
+            }
+        }
+        stage('Reimport SSL Certificate to ACM') {
+            steps {
+                sh """
+                aws acm import-certificate \
+                    --certificate-arn ${CERTIFICATE_ARN} \
+                    --certificate file://${WORKSPACE}/certificate.pem \
+                    --private-key file://${WORKSPACE}/private-key.pem \
+                    --certificate-chain file://${WORKSPACE}/certificate-chain.pem
+                """
+            }
+        }
+    }
+    post {
+        always {
+            // Clean up sensitive files after execution
+            sh 'rm -f ${WORKSPACE}/*.pem'
+        }
+    }
+}
+
+Step 4: Explanation
+	1.	Fetch Secrets:
+	•	Uses curl with the Vault token to fetch the SSL data from Vault.
+	•	Parses the JSON response with jq to extract the required fields.
+	2.	Write Files:
+	•	Writes the fetched certificate.pem, private-key.pem, and certificate-chain.pem to files in the Jenkins workspace.
+	3.	AWS CLI Command:
+	•	Reimports the certificate using the AWS CLI and the dynamically fetched ARN.
+	4.	Cleanup:
+	•	Deletes the sensitive PEM files after the job to enhance security.
+
+Step 5: Secure Setup
+	1.	Vault Token:
+	•	Store the Vault token securely in Jenkins’ credentials store.
+	2.	Permissions:
+	•	Ensure the IAM user/role used by Jenkins has the acm:ImportCertificate permission.
+	3.	Environment Variables:
+	•	Mask sensitive data such as AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and VAULT_TOKEN.
+
+Optional Enhancements
+	1.	Error Handling:
+Add error checking for both the Vault fetch and AWS CLI steps:
+
+sh '''
+if ! aws acm import-certificate --certificate-arn ${CERTIFICATE_ARN} \
+    --certificate file://${WORKSPACE}/certificate.pem \
+    --private-key file://${WORKSPACE}/private-key.pem \
+    --certificate-chain file://${WORKSPACE}/certificate-chain.pem; then
+    echo "Failed to import certificate"
+    exit 1
+fi
+'''
+
+
+	2.	Notifications:
+Notify the team of the certificate update via Slack, email, or other channels.
+
+Would you like help testing this pipeline or configuring Jenkins or Vault?
