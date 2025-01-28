@@ -1,0 +1,91 @@
+Here’s a detailed step-by-step guide to configure Server1 as the RDP Licensing Server and set up Server2, Server3, and Server4 to pull licenses from it.
+
+Step 1: Install Remote Desktop Licensing Role on Server1
+	1.	Log in to Server1 with administrative privileges.
+	2.	Open Server Manager.
+	3.	Click Manage > Add Roles and Features.
+	4.	In the wizard:
+	•	Installation Type: Choose Role-based or feature-based installation.
+	•	Server Selection: Ensure Server1 is selected.
+	•	Server Roles:
+	•	Expand Remote Desktop Services.
+	•	Select Remote Desktop Licensing.
+	•	Click Next and then Install.
+	5.	Wait for the installation to complete and Restart the server if prompted.
+
+Step 2: Activate the Remote Desktop Licensing Server
+	1.	Open Server Manager.
+	2.	Go to Tools > Remote Desktop Licensing Manager.
+	3.	In the Licensing Manager:
+	•	Right-click on the server name (Server1).
+	•	Select Activate Server.
+	4.	Follow the Activation Wizard:
+	•	Connection Method: Choose Automatic, or use Web/Phone if the server has no internet access.
+	•	Company Information: Provide necessary details like name, email, etc.
+	•	Complete the activation process.
+	5.	Once activated, you can choose to install licenses immediately or later.
+
+Step 3: Install Remote Desktop CALs on Server1
+	1.	In Remote Desktop Licensing Manager:
+	•	Right-click the server name and select Install Licenses.
+	2.	In the wizard:
+	•	Choose the License Program based on your purchase (e.g., Enterprise Agreement, Retail Purchase).
+	•	Enter the required information (e.g., agreement number or license key).
+	3.	Click Finish to install the CALs.
+
+Step 4: Configure Server1 as the Licensing Server for RDS
+	1.	Open Server Manager on Server1.
+	2.	Go to Tools > Remote Desktop Services > Remote Desktop Session Host Configuration.
+	3.	Under Licensing:
+	•	Right-click RD Licensing Mode and select Properties.
+	•	Select the appropriate mode:
+	•	Per User or Per Device (based on your license type).
+	•	Enter Server1 as the license server.
+	4.	Save the configuration.
+
+Step 5: Configure Server2, Server3, and Server4 to Use Server1 as Licensing Server
+	1.	Log in to each server (Server2, Server3, and Server4) with administrative privileges.
+	2.	Open Server Manager.
+	3.	Go to Tools > Remote Desktop Services > Remote Desktop Session Host Configuration.
+	4.	Under Licensing:
+	•	Right-click RD Licensing Mode and select Properties.
+	•	Choose the licensing mode (Per User or Per Device).
+	•	Enter Server1 as the licensing server name.
+	5.	Save the configuration.
+
+Step 6: Verify Licensing Configuration
+	1.	On each server (Server2, Server3, and Server4):
+	•	Open Command Prompt as an Administrator.
+	•	Run the command:
+
+gpupdate /force
+
+
+	•	Then, check the applied configuration with:
+
+lsdiag
+
+
+	2.	Ensure the servers can connect to Server1 and the correct license mode is configured.
+
+Step 7: (Optional) Configure Licensing Using Group Policy
+
+To centrally manage licensing configuration:
+	1.	Open Group Policy Management on a domain controller.
+	2.	Navigate to:
+
+Computer Configuration > Administrative Templates > Windows Components > Remote Desktop Services > Remote Desktop Session Host > Licensing
+
+
+	3.	Configure the following policies:
+	•	Use the specified Remote Desktop license servers:
+	•	Enable this policy and specify Server1’s FQDN (e.g., server1.domain.local).
+	•	Set the Remote Desktop licensing mode:
+	•	Enable this policy and select the mode (Per User or Per Device).
+	4.	Apply the policy to Server2, Server3, and Server4.
+
+Step 8: Test the Configuration
+	1.	On Server2, Server3, and Server4, try connecting via RDP.
+	2.	Check that licenses are being issued by Server1 in Remote Desktop Licensing Manager on Server1.
+
+This completes the setup! Let me know if you need clarification on any step.
