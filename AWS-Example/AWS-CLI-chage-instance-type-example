@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Set variables
+INSTANCE_ID="i-xxxxxxxxxxxxxxxxx"  # Replace with your EC2 instance ID
+NEW_INSTANCE_TYPE="t3.medium"      # Replace with desired instance type
+
+# Stop the instance
+echo "Stopping instance $INSTANCE_ID..."
+aws ec2 stop-instances --instance-ids $INSTANCE_ID
+
+# Wait until the instance is stopped
+echo "Waiting for instance $INSTANCE_ID to stop..."
+aws ec2 wait instance-stopped --instance-ids $INSTANCE_ID
+echo "Instance stopped."
+
+# Modify the instance type
+echo "Modifying instance type to $NEW_INSTANCE_TYPE..."
+aws ec2 modify-instance-attribute --instance-id $INSTANCE_ID --instance-type "{\"Value\": \"$NEW_INSTANCE_TYPE\"}"
+echo "Instance type changed."
+
+# Start the instance
+echo "Starting instance $INSTANCE_ID..."
+aws ec2 start-instances --instance-ids $INSTANCE_ID
+
+# Wait until the instance is running
+echo "Waiting for instance $INSTANCE_ID to start..."
+aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+echo "Instance started."
+
+# Verify the change
+echo "Verifying instance type..."
+CURRENT_TYPE=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[].Instances[].InstanceType" --output text)
+
+echo "Current instance type: $CURRENT_TYPE"
+
+if [ "$CURRENT_TYPE" == "$NEW_INSTANCE_TYPE" ]; then
+    echo "Instance type successfully changed to $NEW_INSTANCE_TYPE."
+else
+    echo "Failed to change instance type."
+fi
