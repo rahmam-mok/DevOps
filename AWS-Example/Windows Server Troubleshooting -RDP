@@ -1,0 +1,55 @@
+If you are unable to copy and paste between your laptop and a Windows Server 2022 machine during an RDP (Remote Desktop Protocol) session, follow these troubleshooting steps:
+
+### **1. Check Clipboard Redirection in RDP Settings**
+- Before connecting to the server:
+  1. Open the **Remote Desktop Connection** application (`mstsc`).
+  2. Click **Show Options**.
+  3. Go to the **Local Resources** tab.
+  4. Under **Local devices and resources**, check **Clipboard**.
+  5. Click **More...**, ensure **Clipboard** is selected.
+  6. Connect to the server and try copying and pasting again.
+
+### **2. Restart the RDP Clipboard Process (`rdpclip.exe`)**
+On the Windows Server 2022:
+1. Press **Ctrl + Shift + Esc** to open **Task Manager**.
+2. Go to the **Details** tab (or **Processes** tab in older versions).
+3. Find **rdpclip.exe**.
+4. Right-click and select **End Task**.
+5. Go to **File** > **Run new task**, type **rdpclip.exe**, and click **OK**.
+
+### **3. Restart the RDP Service**
+1. Open **Command Prompt** as an administrator.
+2. Run the following commands:
+   ```
+   net stop rdpclip
+   net start rdpclip
+   ```
+3. Try copying and pasting again.
+
+### **4. Modify Group Policy (GPO) Settings**
+If the issue persists, Group Policy might be blocking clipboard redirection:
+1. On the **Windows Server 2022**, press **Win + R**, type `gpedit.msc`, and press **Enter**.
+2. Navigate to:
+   ```
+   Computer Configuration > Administrative Templates > Windows Components > Remote Desktop Services > Remote Desktop Session Host > Device and Resource Redirection
+   ```
+3. Locate **Do not allow clipboard redirection**.
+4. Double-click it and set it to **Disabled**.
+5. Click **OK**, then restart the server.
+
+### **5. Check Registry Settings**
+1. Open **Registry Editor** (`regedit`).
+2. Navigate to:
+   ```
+   HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp
+   ```
+3. Look for `fDisableClip`:
+   - If it exists and is set to `1`, double-click it and change the value to `0`.
+4. Restart the server.
+
+### **6. Ensure Remote Desktop Services Are Running**
+1. Open **Services** (`services.msc`).
+2. Locate **Remote Desktop Services** and **Remote Desktop Clipboard**.
+3. Ensure both services are running and set to **Automatic**.
+
+Try these steps and let me know if the issue persists! 🚀
