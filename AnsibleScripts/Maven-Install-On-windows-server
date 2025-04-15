@@ -1,0 +1,37 @@
+---
+- name: Install Apache Maven on Windows Server 2022
+  hosts: windows
+  gather_facts: no
+  tasks:
+
+    - name: Download Maven zip
+      win_get_url:
+        url: https://dlcdn.apache.org/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.zip
+        dest: C:\Temp\apache-maven-3.9.6-bin.zip
+
+    - name: Unzip Maven
+      win_unzip:
+        src: C:\Temp\apache-maven-3.9.6-bin.zip
+        dest: C:\Program Files\
+        creates: C:\Program Files\apache-maven-3.9.6
+
+    - name: Set MAVEN_HOME environment variable
+      win_environment:
+        state: present
+        name: MAVEN_HOME
+        value: 'C:\Program Files\apache-maven-3.9.6'
+        level: machine
+
+    - name: Add Maven bin to PATH
+      win_environment:
+        state: present
+        name: Path
+        value: 'C:\Program Files\apache-maven-3.9.6\bin'
+        level: machine
+
+    - name: Reboot to apply environment changes (if needed)
+      win_reboot:
+        msg: "Rebooting to apply MAVEN_HOME and updated PATH."
+        pre_reboot_delay: 10
+        reboot_timeout: 600
+        post_reboot_delay: 30
