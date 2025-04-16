@@ -1,0 +1,411 @@
+Great — since your Nagios interface is served under https://yourdomain.com/nagios, and you’re using a custom Apache config, here’s how you can fully configure SSL with Certbot without breaking that subdirectory setup.
+
+⸻
+
+Final Setup for Certbot with Apache and Nagios under /nagios
+
+1. Get Certificate (No Apache Auto-Config)
+
+Run Certbot in standalone mode (so it doesn’t touch your custom Apache config):
+
+sudo systemctl stop httpd
+sudo certbot certonly --standalone -d yourdomain.com
+sudo systemctl start httpd
+
+
+
+⸻
+
+2. Configure Apache SSL with Nagios under /nagios
+
+Edit or create your SSL-enabled virtual host, e.g., /etc/httpd/conf.d/nagios-ssl.conf:
+
+<VirtualHost *:443>
+    ServerName yourdomain.com
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/yourdomain.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/yourdomain.com/privkey.pem
+
+    DocumentRoot /var/www/html
+
+    Alias /nagios /usr/local/nagios/share
+    <Directory "/usr/local/nagios/share">
+        Options None
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    ScriptAlias /nagios/cgi-bin/ /usr/local/nagios/sbin/
+    <Directory "/usr/local/nagios/sbin/">
+        Options ExecCGI
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    # Optional: Authentication (if already configured)
+    <Directory "/usr/local/nagios/sbin/">
+        AuthType Basic
+        AuthName "Nagios Access"
+        AuthUserFile /usr/local/nagios/etc/htpasswd.users
+        Require valid-user
+    </Directory>
+</VirtualHost>
+
+Make sure port 443 is listening and HTTP is redirected to HTTPS if needed.
+
+Restart Apache:
+
+sudo systemctl restart httpd
+
+
+
+⸻
+
+3. Test HTTPS Access
+
+Visit:
+https://yourdomain.com/nagios
+
+Make sure you see the Nagios dashboard over HTTPS.
+
+⸻
+
+4. Set Up Automatic Renewal + Reload
+
+Certbot will auto-renew via systemd. Just ensure Apache reloads after each renewal:
+
+sudo nano /etc/letsencrypt/renewal-hooks/deploy/reload-httpd.sh
+
+Paste:
+
+#!/bin/bash
+echo "Reloading Apache after Certbot renewal"
+systemctl reload httpd
+
+Make it executable:
+
+sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-httpd.sh
+
+
+
+⸻
+
+5. Test Renewal
+
+Run:
+
+sudo certbot renew --dry-run
+
+If that works, you’re fully set — Nagios under /nagios will always serve over a valid SSL cert, and Apache will automatically reload when needed.
+
+⸻
+
+Let me know if you also want HTTP (port 80) to automatically redirect to HTTPS — I can give you that config too.
+
+
+Perfect — since you’re using a custom Apache config for Nagios with a specific SSL configuration and path, you’ll want to integrate Certbot into that setup manually. Here’s how you can do it step-by-step:
+
+⸻
+
+1. Install Certbot
+
+Install EPEL and Certbot with Apache plugin:
+
+sudo dnf install epel-release -y
+sudo dnf install certbot python3-certbot-apache -y
+
+
+
+⸻
+
+2. Obtain the Certificate Only (without auto-editing Apache)
+
+Use --apache only if you want Certbot to modify Apache config. Since you have a custom config, we’ll only get the cert:
+
+sudo certbot certonly --standalone -d yourdomain.com
+
+	•	Make sure port 80 is open and not blocked by firewall or Apache (Certbot needs to temporarily bind to it).
+	•	You can stop Apache temporarily if needed:
+
+sudo systemctl stop httpd
+
+Once Certbot gets the certificate, it will store it in:
+
+/etc/letsencrypt/live/yourdomain.com/
+
+Files:
+	•	fullchain.pem – your cert + chain
+	•	privkey.pem – your private key
+
+⸻
+
+3. Update Your Custom Apache SSL Config
+
+In your custom Nagios config (e.g., /etc/httpd/conf.d/nagios.conf), update or confirm:
+
+<VirtualHost *:443>
+    ServerName yourdomain.com
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/yourdomain.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/yourdomain.com/privkey.pem
+
+    # Other Nagios configs
+    DocumentRoot /usr/local/nagios/share
+    ScriptAlias /nagios/cgi-bin/ /usr/local/nagios/sbin/
+    ...
+</VirtualHost>
+
+Then:
+
+sudo systemctl start httpd
+sudo systemctl enable httpd
+sudo systemctl reload httpd
+
+
+
+⸻
+
+4. Test Renewal and Set Up Automatic Renewal
+
+Test renewal:
+
+sudo certbot renew --dry-run
+
+Certbot will automatically handle renewals via a systemd timer.
+
+However, Apache must reload after a renewal to pick up the new cert. Since you’re using a custom config, manually hook that:
+
+⸻
+
+5. Reload Apache Automatically After Renewal
+
+Create a deploy hook:
+
+sudo nano /etc/letsencrypt/renewal-hooks/deploy/reload-httpd.sh
+
+Add this:
+
+#!/bin/bash
+echo "Reloading Apache after cert renewal..."
+systemctl reload httpd
+
+Make it executable:
+
+sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-httpd.sh
+
+
+
+⸻
+
+6. Optional: Firewall Rules
+
+Make sure HTTPS and HTTP are allowed:
+
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --reload
+
+
+
+⸻
+
+Let me know if Nagios is served on a subdomain like nagios.yourdomain.com or a specific path like yourdomain.com/nagios, and I can tweak the instructions further.
+
+
+Great — since your Nagios interface is served under https://yourdomain.com/nagios, and you’re using a custom Apache config, here’s how you can fully configure SSL with Certbot without breaking that subdirectory setup.
+
+⸻
+
+Final Setup for Certbot with Apache and Nagios under /nagios
+
+1. Get Certificate (No Apache Auto-Config)
+
+Run Certbot in standalone mode (so it doesn’t touch your custom Apache config):
+
+sudo systemctl stop httpd
+sudo certbot certonly --standalone -d yourdomain.com
+sudo systemctl start httpd
+
+
+
+⸻
+
+2. Configure Apache SSL with Nagios under /nagios
+
+Edit or create your SSL-enabled virtual host, e.g., /etc/httpd/conf.d/nagios-ssl.conf:
+
+<VirtualHost *:443>
+    ServerName yourdomain.com
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/yourdomain.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/yourdomain.com/privkey.pem
+
+    DocumentRoot /var/www/html
+
+    Alias /nagios /usr/local/nagios/share
+    <Directory "/usr/local/nagios/share">
+        Options None
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    ScriptAlias /nagios/cgi-bin/ /usr/local/nagios/sbin/
+    <Directory "/usr/local/nagios/sbin/">
+        Options ExecCGI
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    # Optional: Authentication (if already configured)
+    <Directory "/usr/local/nagios/sbin/">
+        AuthType Basic
+        AuthName "Nagios Access"
+        AuthUserFile /usr/local/nagios/etc/htpasswd.users
+        Require valid-user
+    </Directory>
+</VirtualHost>
+
+Make sure port 443 is listening and HTTP is redirected to HTTPS if needed.
+
+Restart Apache:
+
+sudo systemctl restart httpd
+
+
+
+⸻
+
+3. Test HTTPS Access
+
+Visit:
+https://yourdomain.com/nagios
+
+Make sure you see the Nagios dashboard over HTTPS.
+
+⸻
+
+4. Set Up Automatic Renewal + Reload
+
+Certbot will auto-renew via systemd. Just ensure Apache reloads after each renewal:
+
+sudo nano /etc/letsencrypt/renewal-hooks/deploy/reload-httpd.sh
+
+Paste:
+
+#!/bin/bash
+echo "Reloading Apache after Certbot renewal"
+systemctl reload httpd
+
+Make it executable:
+
+sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-httpd.sh
+
+
+
+⸻
+
+5. Test Renewal
+
+Run:
+
+sudo certbot renew --dry-run
+
+If that works, you’re fully set — Nagios under /nagios will always serve over a valid SSL cert, and Apache will automatically reload when needed.
+
+⸻
+
+Let me know if you also want HTTP (port 80) to automatically redirect to HTTPS — I can give you that config too.
+
+
+To automatically renew SSL certificates using your own ACME server (instead of Let’s Encrypt), you can configure Certbot to use a custom ACME directory URL. Here’s how you can do that:
+
+⸻
+
+1. Set Up Your ACME Server
+
+If you haven’t already, you’ll need an ACME server like:
+	•	Pebble (for testing)
+	•	Boulder (Let’s Encrypt’s production-style server)
+	•	Smallstep CA (lightweight and production-friendly)
+
+Make sure your ACME server is publicly accessible (or accessible to the Nagios server if internal).
+
+⸻
+
+2. Find the Directory URL of Your ACME Server
+
+Every ACME server exposes a directory URL, like:
+
+https://your-acme-server.com/acme/directory
+
+This URL is what Certbot uses to communicate with the CA.
+
+⸻
+
+3. Use Certbot with a Custom ACME Server
+
+Run Certbot with --server and optionally --email and --agree-tos:
+
+sudo certbot certonly \
+  --manual \
+  --preferred-challenges http \
+  --server https://your-acme-server.com/acme/directory \
+  --email you@example.com \
+  --agree-tos \
+  -d yourdomain.com
+
+Replace:
+	•	--manual with the plugin of your choice (e.g. --standalone, --webroot, or --apache)
+	•	--server with your ACME server’s directory URL
+
+Note: Your ACME server must support the same challenge types (http-01, dns-01, etc.) as Certbot.
+
+⸻
+
+4. Set Up Renewal with Your ACME Server
+
+Certbot stores renewal config in /etc/letsencrypt/renewal/yourdomain.com.conf.
+
+Open it:
+
+sudo nano /etc/letsencrypt/renewal/yourdomain.com.conf
+
+Modify or ensure this is set:
+
+server = https://your-acme-server.com/acme/directory
+
+This makes future certbot renew calls use your custom ACME server.
+
+⸻
+
+5. Test Renewal
+
+To make sure your setup is working:
+
+sudo certbot renew --dry-run
+
+Note: Some custom ACME servers (like Pebble) reject --dry-run, so a real renewal might be necessary in those cases.
+
+⸻
+
+6. Optional: Custom Account Registration
+
+If your ACME server requires special registration or credentials, Certbot can use custom account keys and directories. For most cases, this is automatically handled, but let me know if your server has specific auth requirements.
+
+⸻
+
+Summary Checklist
+	•	Custom ACME server is running and accessible
+	•	Certbot uses --server flag to specify it
+	•	Renewal config (.conf file) is updated with server = ...
+	•	Certificates are deployed manually or via Apache config
+	•	Apache reload hook is in place after renewal
+
+⸻
+
+Let me know which ACME server you’re using (Pebble, Boulder, Smallstep, etc.), and I can tailor the commands further.
+
+
