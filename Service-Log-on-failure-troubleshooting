@@ -1,0 +1,202 @@
+
+
+ Server service failing to start after a Windows patch and reboot due to “logon failure,” even though the service account’s username and password haven’t changed—is usually related to Local Security Policy settings or Group Policy that affect how services authenticate after a reboot.
+
+Root Cause
+
+Likely causes include:
+	1.	Loss of “Log on as a service” right for the Tableau service account after a patch or Group Policy refresh.
+	2.	Local Security Policy reset or overwritten during patching.
+	3.	Group Policy Object (GPO) enforcement from domain controller that removes non-standard service accounts from privileges.
+	4.	Credential Manager or LSA caching issues.
+
+When you manually re-enter the credentials, the system temporarily restores the necessary privileges—but these get lost again on the next reboot.
+
+⸻
+
+Permanent Fix Steps
+
+Step 1: Check and Restore “Log on as a service” Rights
+	1.	Open Local Security Policy (secpol.msc).
+	2.	Go to: Local Policies > User Rights Assignment.
+	3.	Find the policy: “Log on as a service”.
+	4.	Ensure the Tableau service account is listed there.
+	5.	If not, add it and apply.
+
+Step 2: Prevent GPO from Overwriting This Setting
+	1.	On a domain controller or through Group Policy Management:
+	•	Identify the GPO that manages “Log on as a service”.
+	•	Modify that GPO to include the Tableau service account.
+	2.	If you can’t modify the GPO:
+	•	Request the domain admin to add the account.
+	•	Otherwise, your local changes will be overwritten regularly.
+
+Step 3: Reconfigure the Service to Store Credentials Properly
+	1.	Open Services (services.msc).
+	2.	Find the Tableau Server service (likely multiple starting with Tableau Server).
+	3.	Right-click > Properties > Log On tab.
+	4.	Re-enter the correct credentials.
+	5.	Click OK.
+	6.	This resets the stored credentials securely under the service control manager.
+
+Step 4: Verify the Account is Not Locked or Expired
+	•	Ensure the account is:
+	•	Not set to expire.
+	•	Not locked out by security policy.
+	•	Not being rotated automatically by a credential manager (like CyberArk).
+
+⸻
+
+Optional: Monitoring/Alert
+
+To catch this in the future:
+	•	Set up a Windows Event Viewer alert on Event ID 7000, 7009, or 7038 in the System log for service logon failures.
+	•	Optionally use PowerShell or a monitoring tool to alert if Tableau services fail to start after a reboot.
+
+⸻
+
+Would you like a PowerShell script to automatically check and fix “Log on as a service” rights for the Tableau user?
+
+Here’s a PowerShell script that checks whether a specified user has the “Log on as a service” right, and adds it if missing.
+
+PowerShell Script: Fix “Log on as a Service” Right
+
+param(
+    [string]$username = "DOMAIN\\service_user"
+)
+
+function Get-LogonAsServiceAccounts {
+    $sid = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544") # Built-in Admins
+    $policyPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa"
+
+    secedit /export /cfg C:\secpol.cfg > $null
+    $lines = Get-Content "C:\secpol.cfg"
+    $logonAsServiceLine = $lines | Where-Object { $_ -like "SeServiceLogonRight*" }
+
+    Remove-Item "C:\secpol.cfg"
+
+    if ($logonAsServiceLine) {
+        $users = $logonAsServiceLine -replace "SeServiceLogonRight\s*=\s*", "" -split ","
+        return $users
+    } else {
+        return @()
+    }
+}
+
+function Add-LogonAsServiceRight {
+    param (
+        [string]$userToAdd
+    )
+
+    $currentUsers = Get-LogonAsServiceAccounts
+    $currentUsers += "*$userToAdd"
+    $currentUsers = $currentUsers | Sort-Object -Unique
+    $userList = $currentUsers -join ","
+
+    $infPath = "$env:TEMP\GrantLogonAsService.inf"
+    $cmdPath = "$env:TEMP\GrantLogonAsService.cmd"
+
+    @"
+[Unicode]
+Unicode=yes
+[System Access]
+[Event Audit]
+[Registry Values]
+[Version]
+signature="\$CHICAGO$"
+Revision=1
+[Privilege Rights]
+SeServiceLogonRight = $userList
+"@ | Set-Content $infPath -Encoding Unicode
+
+    "secedit /configure /db secedit.sdb /cfg `"$infPath`" /areas USER_RIGHTS" | Set-Content $cmdPath
+    Start-Process -FilePath "$cmdPath" -Wait -NoNewWindow
+
+    Remove-Item $infPath, $cmdPath
+}
+
+# Main Logic
+Write-Host "Checking 'Log on as a service' rights for: $username"
+$currentRights = Get-LogonAsServiceAccounts
+
+if ($currentRights -match "\*$username") {
+    Write-Host "User already has 'Log on as a service' right."
+} else {
+    Write-Host "Granting 'Log on as a service' right to $username..."
+    Add-LogonAsServiceRight -userToAdd $username
+    Write-Host "Done. Please reboot the server or restart Tableau services."
+}
+
+
+
+⸻
+
+How to Use
+	1.	Open PowerShell as Administrator.
+	2.	Save the script to a .ps1 file (e.g., Fix-LogonAsService.ps1).
+	3.	Run it with your Tableau service account:
+
+.\Fix-LogonAsService.ps1 -username "DOMAIN\\service_user"
+
+Note: Replace DOMAIN\\service_user with your actual domain and username.
+
+⸻
+
+Let me know if you want this to run as a scheduled task after every reboot or patch window.
+
+Great! Here’s how you can set this script to run automatically after every reboot using a Scheduled Task in Windows:
+
+⸻
+
+Step 1: Save the Script
+
+Save the previous PowerShell script as:
+C:\Scripts\Fix-LogonAsService.ps1
+
+Make sure it exists and is tested manually first.
+
+⸻
+
+Step 2: Create Scheduled Task to Run at Startup
+
+Run the following PowerShell as Administrator to create the task:
+
+$taskName = "FixLogonAsServiceRight"
+$scriptPath = "C:\Scripts\Fix-LogonAsService.ps1"
+$username = "DOMAIN\\service_user"
+
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$scriptPath`" -username `"$username`""
+$trigger = New-ScheduledTaskTrigger -AtStartup
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal
+
+Replace DOMAIN\\service_user with your actual service account.
+
+⸻
+
+Step 3: Test It
+	1.	Reboot the server.
+	2.	After reboot, run:
+
+Get-ScheduledTask -TaskName "FixLogonAsServiceRight" | Get-ScheduledTaskInfo
+
+	3.	You can also check the Task Scheduler GUI > Task Scheduler Library > confirm the task ran and had no errors.
+
+⸻
+
+Optional: Add Logging
+
+If you’d like logging, update the script line in the scheduled task creation like this:
+
+$logFile = "C:\Scripts\FixLogonAsService.log"
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$scriptPath`" -username `"$username`" *> `"$logFile`" 2>&1"
+
+
+
+⸻
+
+Want me to wrap all of this into a script that sets up everything at once (including saving the PowerShell file)?
+
+
+
