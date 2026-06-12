@@ -1,0 +1,827 @@
+######dev.tfvar #########example###########
+
+###############################################################################
+# DEV environment
+###############################################################################
+
+aws_region  = "us-east-1"
+environment = "dev"
+identifier  = "oracle-app-dev"
+
+# --- Existing networking (REPLACE with real IDs) ---------------------------
+subnet_ids             = ["subnet-0dev1111111111111", "subnet-0dev2222222222222"]
+vpc_security_group_ids = ["sg-0dev0000000000000"]
+
+# --- Engine (single-tenant / non-CDB) --------------------------------------
+engine                 = "oracle-se2"
+engine_version         = "19.0.0.0.ru-2024-01.rur-2024-01.r1"
+license_model          = "license-included"
+parameter_group_family = "oracle-se2-19"
+character_set_name     = "AL32UTF8"
+
+# --- Sizing & storage ------------------------------------------------------
+instance_class        = "db.t3.medium"
+allocated_storage     = 50
+max_allocated_storage = 100
+storage_type          = "gp3"
+storage_encrypted     = true
+
+# --- Database --------------------------------------------------------------
+db_name  = ""
+username = ""
+port     = 1521
+
+# --- HA / backups / protection (relaxed for dev) ---------------------------
+multi_az                = false
+backup_retention_period = 1
+deletion_protection     = false
+skip_final_snapshot     = true
+apply_immediately       = true
+
+# --- Monitoring ------------------------------------------------------------
+performance_insights_enabled    = true
+monitoring_interval             = 0
+enabled_cloudwatch_logs_exports = ["alert", "listener"]
+
+# --- Parameters / options --------------------------------------------------
+db_parameters = [
+  { name = "open_cursors", value = "300" }
+]
+
+db_options = []
+
+tags = {
+  Environment = "dev"
+  Application = "oracle-app"
+  ManagedBy   = "terraform"
+  CostCenter  = "engineering"
+}
+
+
+###############qa.tfvar#############################
+
+###############################################################################
+# QA environment
+###############################################################################
+
+aws_region  = "us-east-1"
+environment = "qa"
+identifier  = "oracle-app-qa"
+
+# --- Existing networking (REPLACE with real IDs) ---------------------------
+subnet_ids             = ["subnet-0qa11111111111111", "subnet-0qa22222222222222"]
+vpc_security_group_ids = ["sg-0qa00000000000000"]
+
+# --- Engine (single-tenant / non-CDB) --------------------------------------
+engine                 = "oracle-se2"
+engine_version         = "19.0.0.0.ru-2024-01.rur-2024-01.r1"
+license_model          = "license-included"
+parameter_group_family = "oracle-se2-19"
+character_set_name     = "AL32UTF8"
+
+# --- Sizing & storage ------------------------------------------------------
+instance_class        = "db.t3.large"
+allocated_storage     = 100
+max_allocated_storage = 200
+storage_type          = "gp3"
+storage_encrypted     = true
+
+# --- Database --------------------------------------------------------------
+db_name  = "ORCLQA"
+username = "admin"
+port     = 1521
+
+# --- HA / backups / protection ---------------------------------------------
+multi_az                = false
+backup_retention_period = 7
+deletion_protection     = true
+skip_final_snapshot     = false
+apply_immediately       = false
+
+# --- Monitoring ------------------------------------------------------------
+performance_insights_enabled = true
+monitoring_interval          = 60
+# monitoring_role_arn must be set when monitoring_interval > 0:
+monitoring_role_arn             = "arn:aws:iam::000000000000:role/rds-monitoring-role"
+enabled_cloudwatch_logs_exports = ["alert", "listener", "trace"]
+
+# --- Parameters / options --------------------------------------------------
+db_parameters = [
+  { name = "open_cursors", value = "500" }
+]
+
+db_options = []
+
+tags = {
+  Environment = "qa"
+  Application = "oracle-app"
+  ManagedBy   = "terraform"
+  CostCenter  = "engineering"
+}
+
+#################prod.tfvar############################
+
+###############################################################################
+# PROD environment
+###############################################################################
+
+aws_region  = "us-east-1"
+environment = "prod"
+identifier  = "oracle-app-prod"
+
+# --- Existing networking (REPLACE with real IDs) ---------------------------
+subnet_ids             = ["subnet-0prod111111111111", "subnet-0prod222222222222", "subnet-0prod333333333333"]
+vpc_security_group_ids = ["sg-0prod00000000000"]
+
+# --- Engine (single-tenant / non-CDB) --------------------------------------
+# Enterprise Edition is common in prod; switch parameter_group_family to match.
+engine                 = "oracle-ee"
+engine_version         = "19.0.0.0.ru-2024-01.rur-2024-01.r1"
+license_model          = "bring-your-own-license"
+parameter_group_family = "oracle-ee-19"
+character_set_name     = "AL32UTF8"
+
+# --- Sizing & storage ------------------------------------------------------
+instance_class        = "db.m6i.xlarge"
+allocated_storage     = 500
+max_allocated_storage = 1000
+storage_type          = "io1"
+iops                  = 10000
+storage_encrypted     = true
+# Use a customer-managed KMS key in prod:
+kms_key_id = "arn:aws:kms:us-east-1:000000000000:key/REPLACE-WITH-CMK"
+
+# --- Database --------------------------------------------------------------
+db_name  = "ORCLPRD"
+username = "admin"
+port     = 1521
+
+# --- HA / backups / protection (hardened) ----------------------------------
+multi_az                    = true
+backup_retention_period     = 35
+backup_window               = "03:00-04:00"
+maintenance_window          = "Sun:04:00-Sun:05:00"
+deletion_protection         = true
+skip_final_snapshot         = false
+apply_immediately           = false
+auto_minor_version_upgrade  = false
+allow_major_version_upgrade = false
+
+# --- Monitoring ------------------------------------------------------------
+performance_insights_enabled          = true
+performance_insights_retention_period = 731
+monitoring_interval                   = 30
+monitoring_role_arn                   = "arn:aws:iam::000000000000:role/rds-monitoring-role"
+enabled_cloudwatch_logs_exports       = ["alert", "audit", "listener", "trace"]
+
+# --- Parameters / options --------------------------------------------------
+db_parameters = [
+  { name = "open_cursors", value = "1000" }
+]
+
+db_options = []
+
+tags = {
+  Environment = "prod"
+  Application = "oracle-app"
+  ManagedBy   = "terraform"
+  CostCenter  = "engineering"
+  Compliance  = "in-scope"
+}
+
+################main.tf#######################################
+
+locals {
+  # Resolve which subnet group / parameter group / option group to attach.
+  db_subnet_group_name = var.create_db_subnet_group ? aws_db_subnet_group.this[0].name : var.existing_db_subnet_group_name
+  parameter_group_name = var.create_parameter_group ? aws_db_parameter_group.this[0].name : var.parameter_group_name
+  option_group_name    = var.create_option_group ? aws_db_option_group.this[0].name : var.option_group_name
+
+  name_prefix = "${var.identifier}-${var.environment}"
+}
+
+###############################################################################
+# DB subnet group (built from existing subnets)
+###############################################################################
+
+resource "aws_db_subnet_group" "this" {
+  count = var.create_db_subnet_group ? 1 : 0
+
+  name        = "${local.name_prefix}-subnet-group"
+  description = "Subnet group for ${local.name_prefix} Oracle RDS"
+  subnet_ids  = var.subnet_ids
+
+  tags = {
+    Name = "${local.name_prefix}-subnet-group"
+  }
+}
+
+###############################################################################
+# Parameter group
+###############################################################################
+
+resource "aws_db_parameter_group" "this" {
+  count = var.create_parameter_group ? 1 : 0
+
+  name        = "${local.name_prefix}-params"
+  family      = var.parameter_group_family
+  description = "Parameter group for ${local.name_prefix} Oracle RDS"
+
+  dynamic "parameter" {
+    for_each = var.db_parameters
+    content {
+      name         = parameter.value.name
+      value        = parameter.value.value
+      apply_method = parameter.value.apply_method
+    }
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name = "${local.name_prefix}-params"
+  }
+}
+
+###############################################################################
+# Option group
+###############################################################################
+
+resource "aws_db_option_group" "this" {
+  count = var.create_option_group ? 1 : 0
+
+  name                     = "${local.name_prefix}-options"
+  option_group_description = "Option group for ${local.name_prefix} Oracle RDS"
+  engine_name              = var.engine
+  major_engine_version     = regex("^[0-9]+", var.parameter_group_family) # e.g. "19" from "oracle-se2-19"
+
+  dynamic "option" {
+    for_each = var.db_options
+    content {
+      option_name = option.value.option_name
+      port        = option.value.port
+      version     = option.value.version
+
+      dynamic "option_settings" {
+        for_each = option.value.option_settings
+        content {
+          name  = option_settings.value.name
+          value = option_settings.value.value
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name = "${local.name_prefix}-options"
+  }
+}
+
+###############################################################################
+# Master password (only used when RDS-managed password is disabled)
+###############################################################################
+
+resource "random_password" "master" {
+  count = var.manage_master_user_password ? 0 : 1
+
+  length           = 24
+  special          = true
+  override_special = "_!#$%^&*()-=+"
+  # Oracle master password rules: no @, /, ", or spaces.
+}
+
+###############################################################################
+# Oracle RDS instance (single-tenant / non-CDB)
+###############################################################################
+
+resource "aws_db_instance" "this" {
+  identifier = var.identifier
+
+  # Engine
+  engine         = var.engine
+  engine_version = var.engine_version
+  license_model  = var.license_model
+
+  # Sizing & storage
+  instance_class        = var.instance_class
+  allocated_storage     = var.allocated_storage
+  max_allocated_storage = var.max_allocated_storage > 0 ? var.max_allocated_storage : null
+  storage_type          = var.storage_type
+  iops                  = var.iops
+  storage_throughput    = var.storage_throughput
+  storage_encrypted     = var.storage_encrypted
+  kms_key_id            = var.kms_key_id
+
+  # Database & credentials
+  db_name                  = var.db_name
+  username                 = var.username
+  port                     = var.port
+  character_set_name       = var.character_set_name
+  nchar_character_set_name = var.nchar_character_set_name
+
+  manage_master_user_password   = var.manage_master_user_password ? true : null
+  master_user_secret_kms_key_id = var.manage_master_user_password ? var.master_user_secret_kms_key_id : null
+  password                      = var.manage_master_user_password ? null : random_password.master[0].result
+
+  # Networking — existing VPC resources
+  db_subnet_group_name   = local.db_subnet_group_name
+  vpc_security_group_ids = var.vpc_security_group_ids
+  multi_az               = var.multi_az
+  availability_zone      = var.multi_az ? null : var.availability_zone
+  publicly_accessible    = false
+
+  # Parameter & option groups
+  parameter_group_name = local.parameter_group_name
+  option_group_name    = local.option_group_name
+
+  # Backups & maintenance
+  backup_retention_period   = var.backup_retention_period
+  backup_window             = var.backup_window
+  maintenance_window        = var.maintenance_window
+  copy_tags_to_snapshot     = var.copy_tags_to_snapshot
+  deletion_protection       = var.deletion_protection
+  skip_final_snapshot       = var.skip_final_snapshot
+  final_snapshot_identifier = var.skip_final_snapshot ? null : "${var.final_snapshot_identifier_prefix}-${var.identifier}"
+  apply_immediately         = var.apply_immediately
+
+  allow_major_version_upgrade = var.allow_major_version_upgrade
+  auto_minor_version_upgrade  = var.auto_minor_version_upgrade
+
+  # Monitoring & logging
+  performance_insights_enabled          = var.performance_insights_enabled
+  performance_insights_retention_period = var.performance_insights_enabled ? var.performance_insights_retention_period : null
+  performance_insights_kms_key_id       = var.performance_insights_enabled ? var.performance_insights_kms_key_id : null
+  monitoring_interval                   = var.monitoring_interval
+  monitoring_role_arn                   = var.monitoring_interval > 0 ? var.monitoring_role_arn : null
+  enabled_cloudwatch_logs_exports       = var.enabled_cloudwatch_logs_exports
+
+  tags = {
+    Name = local.name_prefix
+  }
+
+  lifecycle {
+    # Ignore drift on the generated password; rotate it deliberately instead.
+    ignore_changes = [password]
+  }
+}
+
+
+################output.tf#########################
+
+output "db_instance_id" {
+  description = "The RDS DB instance identifier."
+  value       = aws_db_instance.this.id
+}
+
+output "db_instance_arn" {
+  description = "The ARN of the RDS DB instance."
+  value       = aws_db_instance.this.arn
+}
+
+output "db_instance_endpoint" {
+  description = "Connection endpoint (host:port) for the Oracle instance."
+  value       = aws_db_instance.this.endpoint
+}
+
+output "db_instance_address" {
+  description = "Hostname of the RDS instance."
+  value       = aws_db_instance.this.address
+}
+
+output "db_instance_port" {
+  description = "Port on which the Oracle database is listening."
+  value       = aws_db_instance.this.port
+}
+
+output "db_name" {
+  description = "The Oracle database (SID) name."
+  value       = aws_db_instance.this.db_name
+}
+
+output "db_subnet_group_name" {
+  description = "The DB subnet group in use."
+  value       = local.db_subnet_group_name
+}
+
+output "parameter_group_name" {
+  description = "The parameter group in use."
+  value       = local.parameter_group_name
+}
+
+output "option_group_name" {
+  description = "The option group in use."
+  value       = local.option_group_name
+}
+
+output "master_user_secret_arn" {
+  description = "ARN of the Secrets Manager secret holding the RDS-managed master password (null when not RDS-managed)."
+  value       = var.manage_master_user_password ? try(aws_db_instance.this.master_user_secret[0].secret_arn, null) : null
+}
+
+
+#################provider.tf#################
+provider "aws" {
+  region = var.aws_region
+
+  default_tags {
+    tags = var.tags
+  }
+}
+
+
+############variables.tf#####################
+
+###############################################################################
+# General / environment
+###############################################################################
+
+variable "aws_region" {
+  description = "AWS region in which to create the Oracle RDS instance."
+  type        = string
+}
+
+variable "environment" {
+  description = "Deployment environment name (e.g. dev, qa, prod). Used in naming/tags."
+  type        = string
+}
+
+variable "identifier" {
+  description = "The RDS DB instance identifier. Must be unique within the region/account."
+  type        = string
+}
+
+variable "tags" {
+  description = "Map of tags applied to all resources via the provider default_tags block."
+  type        = map(string)
+  default     = {}
+}
+
+###############################################################################
+# Networking (existing VPC / subnets / security groups are referenced, not created)
+###############################################################################
+
+variable "subnet_ids" {
+  description = "List of existing subnet IDs (private DB subnets) used to build the DB subnet group."
+  type        = list(string)
+
+  validation {
+    condition     = length(var.subnet_ids) >= 2
+    error_message = "At least two subnet IDs in different AZs are required for an RDS subnet group."
+  }
+}
+
+variable "vpc_security_group_ids" {
+  description = "List of existing VPC security group IDs to associate with the RDS instance."
+  type        = list(string)
+}
+
+variable "create_db_subnet_group" {
+  description = "Whether to create a new DB subnet group from subnet_ids. Set false to reuse an existing one."
+  type        = bool
+  default     = true
+}
+
+variable "existing_db_subnet_group_name" {
+  description = "Name of an existing DB subnet group to use when create_db_subnet_group = false."
+  type        = string
+  default     = null
+}
+
+###############################################################################
+# Engine — single-tenant Oracle
+#
+# Single-tenant (non-CDB) Oracle engines on RDS are:
+#   - oracle-ee   (Enterprise Edition, non-CDB)
+#   - oracle-se2  (Standard Edition Two, non-CDB)
+# The "-cdb" engines (oracle-ee-cdb / oracle-se2-cdb) are the multi-tenant
+# variants and are intentionally NOT used here.
+###############################################################################
+
+variable "engine" {
+  description = "Oracle RDS engine. Use a non-CDB engine for single-tenant (oracle-ee or oracle-se2)."
+  type        = string
+  default     = "oracle-se2"
+
+  validation {
+    condition     = contains(["oracle-ee", "oracle-se2"], var.engine)
+    error_message = "engine must be a single-tenant (non-CDB) Oracle engine: oracle-ee or oracle-se2."
+  }
+}
+
+variable "engine_version" {
+  description = "Oracle engine version (e.g. 19.0.0.0.ru-2024-01.rur-2024-01.r1). Null = latest supported by RDS."
+  type        = string
+  default     = null
+}
+
+variable "license_model" {
+  description = "Oracle license model: license-included or bring-your-own-license."
+  type        = string
+  default     = "license-included"
+
+  validation {
+    condition     = contains(["license-included", "bring-your-own-license"], var.license_model)
+    error_message = "license_model must be license-included or bring-your-own-license."
+  }
+}
+
+variable "character_set_name" {
+  description = "Oracle database character set (e.g. AL32UTF8). Null uses the engine default."
+  type        = string
+  default     = null
+}
+
+variable "nchar_character_set_name" {
+  description = "Oracle national character set (e.g. AL16UTF16). Null uses the engine default."
+  type        = string
+  default     = null
+}
+
+###############################################################################
+# Instance sizing & storage
+###############################################################################
+
+variable "instance_class" {
+  description = "RDS instance class (e.g. db.t3.medium, db.m6i.large)."
+  type        = string
+}
+
+variable "allocated_storage" {
+  description = "Allocated storage in GiB."
+  type        = number
+  default     = 50
+}
+
+variable "max_allocated_storage" {
+  description = "Upper limit (GiB) for storage autoscaling. Set 0 to disable autoscaling."
+  type        = number
+  default     = 0
+}
+
+variable "storage_type" {
+  description = "Storage type: gp2, gp3, or io1."
+  type        = string
+  default     = "gp3"
+}
+
+variable "iops" {
+  description = "Provisioned IOPS. Required/used only for io1 and (optionally) gp3."
+  type        = number
+  default     = null
+}
+
+variable "storage_throughput" {
+  description = "Storage throughput (MiBps) for gp3 volumes. Null uses the default."
+  type        = number
+  default     = null
+}
+
+variable "storage_encrypted" {
+  description = "Whether storage is encrypted at rest."
+  type        = bool
+  default     = true
+}
+
+variable "kms_key_id" {
+  description = "KMS key ARN for storage encryption. Null uses the default AWS-managed RDS key."
+  type        = string
+  default     = null
+}
+
+###############################################################################
+# Database / master credentials
+###############################################################################
+
+variable "db_name" {
+  description = "The Oracle database (SID) name, e.g. ORCL. Max 8 chars for Oracle."
+  type        = string
+  default     = "ORCL"
+}
+
+variable "username" {
+  description = "Master username for the Oracle instance."
+  type        = string
+  default     = "admin"
+}
+
+variable "manage_master_user_password" {
+  description = "Let RDS manage the master password in Secrets Manager (recommended). If false, a random password is generated and stored in this state."
+  type        = bool
+  default     = true
+}
+
+variable "master_user_secret_kms_key_id" {
+  description = "KMS key ID/ARN for the RDS-managed master user secret. Null uses the default Secrets Manager key."
+  type        = string
+  default     = null
+}
+
+variable "port" {
+  description = "Port on which the Oracle database accepts connections."
+  type        = number
+  default     = 1521
+}
+
+###############################################################################
+# High availability, backups & maintenance
+###############################################################################
+
+variable "multi_az" {
+  description = "Whether to deploy a Multi-AZ standby instance."
+  type        = bool
+  default     = false
+}
+
+variable "availability_zone" {
+  description = "Specific AZ for a single-AZ deployment. Ignored when multi_az = true."
+  type        = string
+  default     = null
+}
+
+variable "backup_retention_period" {
+  description = "Number of days to retain automated backups (0-35)."
+  type        = number
+  default     = 7
+}
+
+variable "backup_window" {
+  description = "Daily time range (UTC) for automated backups, e.g. 03:00-04:00."
+  type        = string
+  default     = "03:00-04:00"
+}
+
+variable "maintenance_window" {
+  description = "Weekly time range (UTC) for maintenance, e.g. Sun:04:00-Sun:05:00."
+  type        = string
+  default     = "Sun:04:00-Sun:05:00"
+}
+
+variable "copy_tags_to_snapshot" {
+  description = "Copy all instance tags to snapshots."
+  type        = bool
+  default     = true
+}
+
+variable "deletion_protection" {
+  description = "Enable deletion protection on the instance."
+  type        = bool
+  default     = true
+}
+
+variable "skip_final_snapshot" {
+  description = "Skip the final snapshot when the instance is destroyed."
+  type        = bool
+  default     = false
+}
+
+variable "final_snapshot_identifier_prefix" {
+  description = "Prefix for the final snapshot identifier (a timestamp suffix is appended)."
+  type        = string
+  default     = "final"
+}
+
+variable "apply_immediately" {
+  description = "Apply changes immediately rather than during the next maintenance window."
+  type        = bool
+  default     = false
+}
+
+variable "allow_major_version_upgrade" {
+  description = "Allow major engine version upgrades."
+  type        = bool
+  default     = false
+}
+
+variable "auto_minor_version_upgrade" {
+  description = "Automatically apply minor engine version upgrades during maintenance."
+  type        = bool
+  default     = true
+}
+
+###############################################################################
+# Monitoring & logging
+###############################################################################
+
+variable "performance_insights_enabled" {
+  description = "Enable Performance Insights."
+  type        = bool
+  default     = true
+}
+
+variable "performance_insights_retention_period" {
+  description = "Performance Insights retention in days (7, or a multiple of 31 up to 731)."
+  type        = number
+  default     = 7
+}
+
+variable "performance_insights_kms_key_id" {
+  description = "KMS key ARN for Performance Insights data. Null uses the default."
+  type        = string
+  default     = null
+}
+
+variable "monitoring_interval" {
+  description = "Enhanced Monitoring interval in seconds (0 to disable; otherwise 1,5,10,15,30,60)."
+  type        = number
+  default     = 0
+}
+
+variable "monitoring_role_arn" {
+  description = "IAM role ARN for Enhanced Monitoring. Required when monitoring_interval > 0."
+  type        = string
+  default     = null
+}
+
+variable "enabled_cloudwatch_logs_exports" {
+  description = "List of Oracle log types to export to CloudWatch (e.g. alert, audit, listener, trace)."
+  type        = list(string)
+  default     = ["alert", "listener", "trace"]
+}
+
+###############################################################################
+# Parameter group & option group
+###############################################################################
+
+variable "create_parameter_group" {
+  description = "Whether to create a dedicated DB parameter group."
+  type        = bool
+  default     = true
+}
+
+variable "parameter_group_name" {
+  description = "Name of an existing parameter group to use when create_parameter_group = false."
+  type        = string
+  default     = null
+}
+
+variable "parameter_group_family" {
+  description = "DB parameter/option group family (e.g. oracle-se2-19, oracle-ee-19)."
+  type        = string
+}
+
+variable "db_parameters" {
+  description = "List of DB parameters to set on the created parameter group."
+  type = list(object({
+    name         = string
+    value        = string
+    apply_method = optional(string, "immediate")
+  }))
+  default = []
+}
+
+variable "create_option_group" {
+  description = "Whether to create a dedicated DB option group."
+  type        = bool
+  default     = true
+}
+
+variable "option_group_name" {
+  description = "Name of an existing option group to use when create_option_group = false."
+  type        = string
+  default     = null
+}
+
+variable "db_options" {
+  description = "List of options to add to the created option group."
+  type = list(object({
+    option_name = string
+    port        = optional(number)
+    version     = optional(string)
+    option_settings = optional(list(object({
+      name  = string
+      value = string
+    })), [])
+  }))
+  default = []
+}
+
+
+################versions.tf##############
+
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.5"
+    }
+  }
+
+  # Remote state is environment-specific. Pass backend config at init time, e.g.:
+  #   terraform init -backend-config=backend-dev.hcl
+  backend "s3" {}
+}
+
+
+
